@@ -1,0 +1,22 @@
+{
+  "settings": {
+    "focusMinutes": 25,
+    "shortBreakMinutes": 5,
+    "longBreakMinutes": 15,
+    "longBreakInterval": 4,
+    "autoCycle": true,
+    "defaultMode": "pomodoro",
+    "minSessionSeconds": 60,
+    "dailyGoalMinutes": 120,
+    "playSound": true,
+    "vibrate": true,
+    "showNotice": true,
+    "dataFolder": "FocusLog",
+    "weekStart": 0,
+    "dailyNotesFolder": "",
+    "dailyNotesFormat": "",
+    "openOnStartup": true,
+    "promptAfterFocus": true
+  },
+  "runtime": null
+}
