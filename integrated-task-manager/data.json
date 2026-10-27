@@ -1,0 +1,47 @@
+{
+  "smartLists": [],
+  "taskMode": true,
+  "linkDates": true,
+  "tagFormat": "hash",
+  "dateFormat": "",
+  "sectionHeadingLevel": 1,
+  "showSubtasks": true,
+  "calendarProjectColors": true,
+  "calendarPriorityColors": true,
+  "inboxPath": "Inbox.md",
+  "projectFolder": "10_Projects",
+  "moveConvertedProjects": true,
+  "newTaskPosition": "top",
+  "showUndoNotices": true,
+  "density": "compact",
+  "hiddenSidebarSections": [],
+  "showFiles": true,
+  "fileSortOrder": "alphabetical",
+  "customFileOrder": false,
+  "favorites": [],
+  "navOrder": {
+    "projects": [],
+    "tags": [],
+    "files": {}
+  },
+  "style": "griply",
+  "taskDetails": "sidebar",
+  "completionDates": true,
+  "completedPlacement": "keep",
+  "completedSection": "Task Log",
+  "noteGroupLabel": "name",
+  "foldedDescriptions": [],
+  "viewOptions": {},
+  "viewLayouts": {
+    "project:10_Projects/Active/ASPC.md": "calendar",
+    "projects": "gantt"
+  },
+  "viewPeriods": {},
+  "ignoredPaths": [],
+  "ignoredTags": [
+    "routine"
+  ],
+  "ignoreCodeBlockTasks": true,
+  "panelsPlaced": true,
+  "sidebarIdleView": "context"
+}

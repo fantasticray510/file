@@ -1,0 +1,2760 @@
+.workspace-leaf-content[data-type="task-manager-navigation"] .view-content {
+  padding: 0;
+}
+
+.tm-navigation,
+.tm-main-view {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  color: var(--text-normal);
+}
+
+/* A view with no rows takes focus itself when its tab comes to the front; like a note's page, it shows no ring. */
+.tm-main-view:focus { outline: none; }
+
+.tm-navigation {
+  padding: var(--size-4-3) var(--size-4-2);
+}
+
+.tm-nav-header,
+.tm-view-header,
+.tm-title-group,
+.tm-task-primary,
+.tm-task-metadata,
+.tm-editor-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* The sidebar, after Things: the toolbar, then lists in groups set apart, each a coloured icon, a bold name and (for
+   Inbox, Today and tags) a quiet count, smart lists under All Tasks; then Projects and Tags, each a heading over its
+   items. */
+.tm-nav-header {
+  min-height: 40px;
+  padding: var(--size-4-2);
+  justify-content: center;
+}
+.tm-nav-header .nav-buttons-container { display: flex; gap: var(--size-4-2); justify-content: center; }
+.tm-nav-list { padding: 0 var(--size-4-2) var(--size-4-4); }
+.tm-nav-group + .tm-nav-group { margin-top: var(--size-4-4); }
+/* Folded Projects and Tags sit one under the other as a group's lists do; an open one keeps the gap after its items.
+   Files, the vault rather than tasks, always stands apart. */
+.tm-nav-section.is-folded + .tm-nav-section:not(.tm-nav-files) { margin-top: 0; }
+.tm-navigation .tm-nav-item {
+  --tm-nav-color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--text-normal);
+}
+.tm-navigation .tm-nav-item.is-blue { --tm-nav-color: var(--color-blue); }
+.tm-navigation .tm-nav-item.is-yellow { --tm-nav-color: var(--color-yellow); }
+.tm-navigation .tm-nav-item.is-red { --tm-nav-color: var(--color-red); }
+.tm-navigation .tm-nav-item.is-cyan { --tm-nav-color: var(--color-cyan); }
+.tm-navigation .tm-nav-item.is-orange { --tm-nav-color: var(--color-orange); }
+.tm-navigation .tm-nav-item.is-muted, .tm-navigation .tm-nav-item.is-section { --tm-nav-color: var(--text-faint); }
+.tm-nav-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 16px; color: var(--tm-nav-color); }
+.tm-nav-icon svg { width: 16px; height: 16px; }
+/* In the Things style Today's star is filled, as Things draws it; the Griply style's calendar stays an outline. */
+.tm-navigation.tm-style-things .tm-nav-item.is-yellow .tm-nav-icon svg { fill: currentColor; }
+.tm-navigation button.tm-nav-label {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 4px 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: inherit;
+  /* The size of Obsidian's own sidebar items, such as the file explorer's. */
+  font-size: var(--nav-item-size, var(--font-ui-small));
+  font-weight: var(--font-semibold);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tm-nav-count { flex: none; color: var(--text-faint); font-size: var(--font-ui-small); font-weight: var(--font-semibold); font-variant-numeric: tabular-nums; }
+/* Hover and the open item look as the file explorer's do, in the theme's own colours. */
+.tm-navigation .tm-nav-item:hover { background: var(--nav-item-background-hover, var(--background-modifier-hover)); }
+.tm-navigation .tm-nav-item.is-active { background: var(--nav-item-background-active, var(--background-modifier-hover)); color: var(--nav-item-color-active, var(--text-normal)); }
+/* An item dragged, as a task is in a list: it lifts and follows the pointer, the rows it leaves close up, and a gap
+   opens where it would land (indented as deep as it will be), the rows around sliding aside. An item that only joins
+   Favorites stays where it is, faded. */
+.tm-navigation .tm-nav-item.is-being-dragged { opacity: 0.5; }
+.tm-navigation .tm-drop-gap { margin-inline-start: calc(var(--tm-depth, 0) * 16px); }
+.tm-navigation .tm-drop-gap::before { inset: 1px 0; border-radius: 8px; }
+/* The lifted item, in a layer of its own over everything, so the list scrolling under it leaves it be. */
+.tm-navigation.tm-nav-drag-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: var(--layer-dragged-item, 10000);
+}
+.tm-nav-drag-layer .tm-nav-item.tm-drag-preview {
+  position: fixed;
+  margin: 0;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: linear-gradient(var(--background-modifier-hover), var(--background-modifier-hover)), var(--background-secondary);
+  box-shadow: var(--shadow-l);
+  scale: 1.02;
+  transition: none;
+  animation: tm-drag-lift 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tm-nav-drag-layer .tm-nav-item.tm-drag-preview.is-settling {
+  scale: 1;
+  box-shadow: var(--shadow-s);
+  transition: scale 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tm-nav-drag-layer .tm-nav-item.tm-drag-preview .tm-nav-collapse { opacity: 0; }
+/* Outside the sidebar, a label with the item's name follows the pointer instead. */
+.tm-nav-drag-layer .tm-nav-item.tm-drag-preview.is-outside { visibility: hidden; }
+/* On touch screens a long press lifts the item, ready to drag. */
+.tm-navigation .tm-nav-item.is-drag-armed { background: var(--background-modifier-hover); box-shadow: var(--shadow-l); }
+body.is-mobile .tm-navigation .tm-nav-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+@media (prefers-reduced-motion: reduce) {
+  .tm-nav-drag-layer .tm-nav-item.tm-drag-preview { animation: none; scale: 1; }
+  .tm-nav-drag-layer .tm-nav-item.tm-drag-preview.is-settling { transition: none; }
+}
+/* A task dragged over a list that takes it, as in Things: the list lights up in the accent colour. */
+.tm-navigation .tm-nav-item.is-drop-target { background: var(--interactive-accent); color: var(--text-on-accent); }
+.tm-navigation .tm-nav-item.is-drop-target .tm-nav-icon, .tm-navigation .tm-nav-item.is-drop-target .tm-nav-count,
+.tm-navigation .tm-nav-section > .tm-nav-item.is-drop-target .tm-nav-label { color: var(--text-on-accent); }
+/* A section's heading (and All Tasks, over its smart lists): the chevron that folds it shows on hover (or focus),
+   at the right. */
+.tm-navigation .tm-nav-section > .tm-nav-item .tm-nav-label { color: var(--text-muted); }
+.tm-navigation .tm-nav-collapse { flex: none; width: 22px; height: 22px; padding: 2px; box-shadow: none; opacity: 0; }
+.tm-navigation .tm-nav-item:hover > .tm-nav-collapse, .tm-navigation .tm-nav-collapse:focus-visible { opacity: 1; }
+.tm-navigation .tm-nav-collapse svg { width: 14px; height: 14px; }
+.tm-navigation .tm-nav-children { margin: 2px 0 0; padding: 0; border: 0; }
+.tm-navigation .tm-nav-children button.tm-nav-label { font-weight: var(--font-medium); }
+/* Subprojects step in under their parent. */
+.tm-navigation .tm-nav-children .tm-nav-item { padding-inline-start: calc(8px + var(--tm-nav-depth, 0) * 16px); }
+/* A project's progress pie, in its colour, stands where a list's icon does. */
+.tm-nav-progress .tm-project-progress { min-height: 0; font-size: 14px; }
+@media (hover: none) { .tm-navigation .tm-nav-collapse { opacity: 1; } }
+.tm-nav-empty { padding: 4px 8px 4px 36px; font-size: var(--font-ui-small); color: var(--text-faint); }
+/* The empty Favorites list, lit up while something dragged over it would join it. */
+.tm-navigation .tm-nav-empty.is-drop-target { border-radius: 8px; background: var(--interactive-accent); color: var(--text-on-accent); }
+/* The file tree reads like the file explorer: names in the normal weight with folders in bold, a file's kind after its name, and renaming in place. */
+.tm-navigation .tm-nav-files .tm-nav-children button.tm-nav-label { font-weight: var(--font-normal); }
+.tm-navigation .tm-nav-files .tm-nav-folder button.tm-nav-label { font-weight: var(--font-bold); }
+.tm-navigation .tm-nav-file.is-active button.tm-nav-label { font-weight: var(--font-medium); }
+.tm-navigation .tm-nav-file-tag { flex: none; margin: 0; }
+.tm-navigation input.tm-nav-rename { flex: 1; min-width: 0; height: auto; padding: 2px 4px; font-size: var(--nav-item-size, var(--font-ui-small)); }
+
+.tm-project-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  /* Match the note title inset, including theme-defined multi-value margins. */
+  padding: var(--file-margins, 32px);
+  padding-inline: 48px;
+  padding-bottom: 64px;
+}
+
+.tm-view-header {
+  justify-content: space-between;
+  gap: var(--size-4-6);
+  margin-bottom: var(--size-4-8);
+}
+
+.tm-title-group {
+  min-width: 0;
+  gap: var(--size-4-2);
+}
+
+/* Page titles look as a note's inline title does: the theme's inline title size, weight, font and colour (which
+   follow Heading 1 unless the theme sets them apart, as it may the colour). */
+.tm-main-view h1.tm-page-title {
+  margin: 0;
+  font-size: var(--font-text-size);
+  font-weight: var(--inline-title-weight, var(--h1-weight, 700));
+  line-height: var(--inline-title-line-height, var(--h1-line-height, 1.2));
+}
+.tm-page-title > span {
+  font-family: var(--inline-title-font, var(--h1-font, inherit));
+  font-size: var(--inline-title-size, var(--h1-size, 1.618em));
+  font-style: var(--inline-title-style, var(--h1-style, normal));
+  font-variant: var(--inline-title-variant, var(--h1-variant, normal));
+  letter-spacing: var(--h1-letter-spacing, -0.015em);
+  color: var(--inline-title-color, var(--h1-color, inherit));
+}
+
+/* The title with a project's "…" button for its actions. */
+.tm-title-row { display: flex; align-items: center; gap: var(--size-4-1); min-width: 0; }
+.tm-title-row .tm-title-more { flex: 0 0 auto; color: var(--text-muted); }
+.tm-title-row .tm-title-more[aria-expanded="true"] { background: var(--background-modifier-hover); color: var(--text-normal); }
+
+.tm-section {
+  margin-bottom: var(--size-4-8);
+}
+/* A note's tasks above its first heading are a list of their own, not a group: the heading after them keeps the space a
+   group leaves below it. (The empty list waiting above a first heading for drops takes none.) */
+.tm-task-list:not(.tm-drop-only) + .tm-section { margin-top: var(--size-4-8); }
+
+.tm-section h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin: 0 0 var(--size-4-2);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.tm-group-add-task { flex-shrink: 0; }
+
+.tm-section.is-alert h2 {
+  color: var(--text-error);
+}
+
+.tm-section-count {
+  padding: 1px 6px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.tm-task-list {
+  border: 0;
+}
+
+.tm-task-row {
+  --tm-depth: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  min-height: 44px;
+  padding: var(--size-4-1) 0 var(--size-4-1) calc(var(--tm-depth) * 24px);
+  border: 0;
+  border-radius: var(--radius-s);
+  transition: background-color 120ms ease;
+}
+
+.tm-task-checkbox {
+  align-self: center;
+  margin-top: 0;
+}
+
+.tm-task-content {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-width: 0;
+  padding: 0 var(--size-4-2);
+}
+
+.tm-task-primary {
+  min-width: 0;
+  gap: var(--size-4-2);
+}
+
+button.tm-task-title {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Scoped specificity overrides native button backgrounds without affecting sizing. */
+.tm-main-view button.tm-task-title { background: transparent; }
+
+button.tm-task-title {
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-task-metadata {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: var(--size-4-1);
+  max-width: min(360px, 52vw);
+  margin: 0;
+  overflow-x: auto;
+  color: var(--color-base-60);
+  font-size: var(--font-ui-smaller);
+}
+
+.tm-task-metadata::-webkit-scrollbar {
+  display: none;
+}
+
+
+.tm-task-row.is-completed .tm-task-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.tm-task-row.is-completed .tm-task-metadata {
+  opacity: 0.7;
+}
+
+.tm-project-icon {
+  color: var(--text-muted);
+}
+
+.tm-project-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.tm-project-progress-circle {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 1.05em;
+  height: 1.05em;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.tm-project-progress-circle::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: conic-gradient(currentColor var(--tm-project-progress, 0%), transparent 0);
+}
+.tm-project-icon .tm-project-progress { min-height: 0; font-size: var(--font-ui-medium); }
+.tm-project-icon { align-items: center; justify-content: center; }
+.tm-project-header-metadata .tm-project-progress { font-size: inherit; gap: 5px; }
+
+.tm-project-percentage {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 340px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.tm-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 50%;
+  color: var(--text-faint);
+}
+
+.tm-empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tm-empty h3 {
+  margin: 0 0 var(--size-4-1);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.tm-empty p {
+  max-width: 420px;
+  margin: 0;
+  font-size: var(--font-ui-small);
+}
+
+.tm-editor-field {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--size-4-4);
+  margin-bottom: var(--size-4-3);
+}
+
+.tm-editor-field label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.tm-editor-field input,
+.tm-editor-field select {
+  width: 100%;
+  font-size: var(--font-ui-small);
+}
+
+.tm-editor-raw-field {
+  margin-bottom: var(--size-4-5);
+}
+
+.tm-editor-error {
+  min-height: 20px;
+  margin-top: var(--size-4-2);
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+}
+
+.tm-editor-actions {
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
+}
+
+.tm-editor-actions .mod-cta {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+@media (max-width: 700px) {
+  .workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view {
+    padding-inline: var(--size-4-4);
+    padding-bottom: var(--size-4-8);
+  }
+
+  .tm-view-header {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: var(--size-4-6);
+  }
+
+  .tm-editor-field {
+    grid-template-columns: 1fr;
+    gap: var(--size-4-1);
+  }
+
+  .tm-task-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .tm-task-content {
+    gap: var(--size-4-1);
+  }
+
+  .tm-task-metadata {
+    max-width: 48vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-task-row {
+    transition: none;
+  }
+}
+
+.tm-project-row .tm-task-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.tm-main-view .tm-project-row .tm-project-header-metadata { margin-top: 0; }
+.tm-project-row .tm-project-icon { align-self: start; }
+
+.tm-task-metadata.tm-project-header-metadata {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  max-width: 100%;
+  margin-top: var(--size-4-2);
+  overflow: visible;
+  color: var(--text-muted);
+}
+
+@media (max-width: 700px) {
+  .tm-project-row .tm-project-metadata {
+    justify-content: flex-start;
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+
+
+
+.tm-checkbox-target { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.tm-checkbox-target .tm-task-checkbox { margin: 0; }
+
+/* Keep phone layouts readable without depending on hover or horizontal scrolling. */
+@media (max-width: 700px) {
+  .workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view {
+    padding: 20px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  .tm-view-header { gap: 12px; margin-bottom: 24px; }
+  .tm-title-group, .tm-title-group > div { min-width: 0; max-width: 100%; }
+  .tm-main-view h1.tm-page-title { overflow-wrap: anywhere; }
+
+   .tm-title-group .clickable-icon { min-height: 44px; min-width: 44px; }
+
+  .tm-task-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: start;
+    min-height: 60px;
+    padding: 6px 0 10px min(calc(var(--tm-depth) * 12px), 36px);
+  }
+  .tm-checkbox-target { width: 44px; min-height: 44px; }
+  .tm-task-content { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 0 2px; }
+  .tm-task-primary { align-items: flex-start; gap: 4px; }
+  button.tm-task-title { height: auto; min-height: 44px; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; padding-block: 10px; }
+  .tm-task-metadata { justify-content: flex-start; flex-wrap: wrap; max-width: 100%; overflow: visible; gap: 4px; }
+
+  .tm-project-row > .tm-project-icon { margin: 13px; }
+  .tm-project-progress { align-self: start; min-height: 44px; }
+  .tm-section h2 { overflow-wrap: anywhere; }
+  .tm-section-count { flex-shrink: 0; }
+  .tm-empty { min-height: 220px; }
+  .tm-navigation button.tm-nav-label { min-height: 44px; }
+  .tm-editor-modal { max-width: 520px; max-height: calc(100dvh - 16px); }
+  .tm-editor-modal .modal-content { min-height: 0; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .tm-editor-field { gap: 6px; margin-bottom: 16px; }
+  .tm-editor-field input, .tm-editor-field select { min-width: 0; min-height: 44px; font-size: 16px; }
+  .tm-editor-actions { position: sticky; bottom: 0; background: var(--background-primary); padding-block: 12px; }
+  .tm-editor-actions button { min-height: 44px; flex: 1; justify-content: center; }
+}
+
+/* Reserve the mobile navigation strip even when Obsidian overlays its header. */
+body.is-mobile .workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view {
+  padding-top: calc(var(--view-header-height, 44px) + var(--view-header-top-offset, env(safe-area-inset-top, 0px)) + 16px);
+  /* Obsidian's floating toolbar sits over the bottom of the view: the last task scrolls clear of it. */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.tm-editor-modal > .tm-editor-actions { flex-shrink: 0; }
+
+/* The native keyboard inset and VisualViewport are alternate upper bounds:
+   take the smaller available height, rather than subtracting the keyboard twice. */
+body.is-mobile .modal-container.tm-editor-container {
+  position: fixed;
+  top: var(--tm-viewport-top, 0px);
+  bottom: auto;
+  height: min(var(--tm-viewport-height, 100dvh), calc(100vh - var(--keyboard-height, 0px)));
+  padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 8px 8px;
+  box-sizing: border-box;
+}
+body.is-mobile .tm-editor-container .tm-editor-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+  margin-block: 0;
+  overflow: hidden;
+}
+body.is-mobile .tm-editor-modal .modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scroll-padding-block: 12px;
+}
+body.is-mobile .tm-editor-modal > .tm-editor-actions {
+  position: static;
+  margin-top: 0;
+  padding: 12px 16px;
+  background: var(--modal-background, var(--background-primary));
+}
+@media (max-width: 700px) {
+  .modal-container.tm-editor-container {
+    position: fixed;
+    top: var(--tm-viewport-top, 0px);
+    bottom: auto;
+    height: min(var(--tm-viewport-height, 100dvh), calc(100vh - var(--keyboard-height, 0px)));
+    padding: max(8px, env(safe-area-inset-top, 0px)) 8px 8px;
+    box-sizing: border-box;
+  }
+  .tm-editor-container .tm-editor-modal { display: flex; flex-direction: column; max-height: 100%; min-height: 0; margin-block: 0; overflow: hidden; }
+  .tm-editor-modal .modal-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; scroll-padding-block: 12px; }
+  .tm-editor-modal > .tm-editor-actions { position: static; margin-top: 0; background: var(--modal-background, var(--background-primary)); }
+}
+
+
+.tm-filter-hint { color: var(--text-muted); font-size: var(--font-ui-small); margin-bottom: 8px; }
+
+
+.tm-calendar-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.tm-calendar-toolbar h2 { flex: 1; margin: 0; font-size: var(--font-ui-medium); }
+.tm-calendar-scopes { display: flex; gap: 4px; }
+.tm-calendar-scopes button[aria-pressed="true"] { background: var(--interactive-accent); color: var(--text-on-accent); }
+.tm-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-left: 1px solid var(--background-modifier-border); }
+.tm-calendar-weekday { padding: 8px 2px; text-align: center; color: var(--text-muted); font-size: var(--font-ui-small); }
+.tm-calendar-cell { min-width: 0; min-height: 110px; padding: 4px; border: 1px solid var(--background-modifier-border); border-left: 0; }
+.tm-calendar-cell.is-outside { background: var(--background-secondary); color: var(--text-muted); }
+.tm-calendar-cell.is-today > .tm-calendar-date { background: transparent; color: var(--text-accent); font-weight: 700; }
+button.tm-calendar-date { border: 0; box-shadow: none; background: transparent; padding: 3px 7px; }
+.tm-calendar .tm-calendar-task { border-radius: 4px; display: block; width: 100%; height: auto; min-height: 12px; padding: 0 4px; margin: 2px 0; box-sizing: border-box; line-height: 10px; text-align: left; white-space: normal; overflow-wrap: anywhere; box-shadow: none; border: 1px solid var(--background-modifier-border); background: var(--background-secondary); font-size: 10px; cursor: grab; }
+.tm-calendar-task.is-completed { text-decoration: line-through; opacity: .65; }
+/* Where a dragged task would land: the list's drop slot, at its time and length in a day's hours, or after a day's
+   tasks; the card being dragged fades where it was, as a list's row does. */
+.tm-calendar-drop-gap { position: relative; box-sizing: border-box; height: 24px; margin: 2px 0; pointer-events: none; }
+.tm-calendar-drop-gap.is-timed { position: absolute; left: 2px; right: 2px; margin: 0; z-index: 2; }
+.tm-calendar-drop-gap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px dashed color-mix(in srgb, var(--interactive-accent) 45%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+}
+.tm-calendar-task.is-dragging { opacity: .45; }
+.tm-calendar-year { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+.tm-calendar-year h3 { margin: 0 0 8px; }
+.tm-calendar-grid.is-compact .tm-calendar-cell { min-height: 44px; padding: 1px; position: relative; }
+.tm-calendar-grid.is-compact .tm-calendar-date { padding: 2px; width: 100%; }
+button.tm-calendar-count { display: block; margin: 0 auto; height: 16px; padding: 0 5px; font-size: 10px; color: var(--text-accent); border: none; box-shadow: none; }
+.tm-calendar-month-tasks { max-height: 150px; overflow-y: auto; margin-top: 8px; }
+.tm-calendar-month-tasks summary { cursor: pointer; color: var(--text-muted); }
+.tm-calendar-allday { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px; border-bottom: 1px solid var(--background-modifier-border); }
+.tm-calendar-allday .tm-calendar-task { width: auto; }
+.tm-calendar-day-scroll { max-height: 65vh; overflow-y: auto; border: 1px solid var(--background-modifier-border); }
+.tm-calendar-timeline { position: relative; height: 1152px; margin: 8px 8px 8px 0; }
+.tm-calendar-hour { position: absolute; width: 52px; text-align: center; font-size: 11px; color: var(--text-muted); }
+.tm-calendar-lane { position: absolute; left: 56px; right: 0; height: 1152px; touch-action: pan-x pan-y; }
+button.tm-calendar-slot { display: block; width: 100%; height: 12px; min-height: 0; box-sizing: border-box; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+button.tm-calendar-slot.is-hour-start { border-top: 1px solid var(--background-modifier-border); }
+button.tm-calendar-slot:hover { background: var(--background-modifier-hover); }
+.tm-calendar-task.is-timed { position: absolute; margin: 0; min-height: 12px; overflow: hidden; padding: 0 4px; z-index: 1; }
+.tm-calendar-selection { position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none; background: var(--interactive-accent); color: var(--text-on-accent); opacity: .8; font-size: 12px; padding-left: 4px; overflow: hidden; }
+@media (max-width: 700px) {
+  .tm-calendar-toolbar h2 { flex-basis: 50%; }
+  .tm-calendar-cell { min-height: 75px; padding: 1px; }
+  .tm-calendar-cell .tm-calendar-task { font-size: 10px; padding: 0 3px; }
+  .tm-calendar-scopes { width: 100%; }
+  .tm-calendar-scopes button { flex: 1; min-height: 44px; }
+  .tm-calendar-date { min-height: 32px; }
+}
+
+.workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view.is-calendar-view {
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 16px;
+}
+
+.is-calendar-view > :is(.tm-view-header, .tm-project-description) { flex-shrink: 0; }
+.is-calendar-view > .tm-task-results { flex: 1; min-height: 0; overflow: hidden; }
+.is-calendar-view .tm-calendar { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.is-calendar-view .tm-calendar-toolbar { flex-shrink: 0; }
+.is-calendar-view .tm-calendar-day-scroll { flex: 1; min-height: 0; max-height: none; }
+.is-calendar-view .tm-calendar-allday { flex-shrink: 0; max-height: 20%; overflow-y: auto; }
+
+.is-month-scope .tm-calendar-cell { min-height: 0; overflow-y: auto; }
+.tm-calendar.is-month-scope .tm-calendar-task {
+  height: 16px;
+  min-height: 16px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 14px;
+  overflow: hidden;
+}
+.tm-calendar.is-month-scope .tm-calendar-task-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.is-year-scope .tm-calendar-year {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  overflow: auto;
+}
+.tm-calendar-year > div { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; }
+.tm-calendar-year h3 { margin-bottom: 4px; font-size: var(--font-ui-small); }
+.tm-calendar-year .tm-calendar-grid { flex: 1; border: 0; grid-template-rows: auto repeat(6, minmax(18px, 1fr)); }
+.tm-calendar-year .tm-calendar-weekday { padding: 0; font-size: 10px; }
+.tm-calendar-year .tm-calendar-grid.is-compact .tm-calendar-cell { border: 0; min-height: 0; padding: 0; }
+.tm-calendar-year .tm-calendar-grid.is-compact button.tm-calendar-date { height: 18px; min-height: 0; padding: 0; font-size: 10px; line-height: 18px; }
+.tm-calendar-year button.tm-calendar-count { position: absolute; top: 0; right: 0; height: 10px; padding: 0 2px; font-size: 8px; line-height: 10px; }
+.tm-calendar-year .tm-calendar-month-tasks { flex-shrink: 0; max-height: 35%; margin-top: 4px; font-size: 10px; }
+@media (max-width: 700px) {
+  .is-year-scope .tm-calendar-year { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 8px; }
+}
+
+/* Week is seven daily schedules on a shared time axis. */
+.tm-calendar-week-scroll { overflow: auto; }
+.tm-calendar-week-header { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); position: sticky; top: 0; z-index: 3; background: var(--background-primary); border-bottom: 1px solid var(--background-modifier-border); }
+.tm-calendar-week-gutter { align-self: end; padding: 4px; color: var(--text-muted); font-size: 10px; }
+.tm-calendar-week-heading { min-width: 0; padding: 4px; border-left: 1px solid var(--background-modifier-border); }
+.tm-calendar-week-heading > .tm-calendar-date { width: 100%; font-size: var(--font-ui-small); white-space: normal; }
+.tm-calendar-week-heading.is-today > .tm-calendar-date { color: var(--text-accent); background: transparent; font-weight: 700; }
+.tm-calendar-week-timeline { margin: 0; }
+.tm-calendar-week-columns { position: absolute; left: 56px; right: 0; height: 100%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.tm-calendar-week-day { position: relative; min-width: 0; border-left: 1px solid var(--background-modifier-border); }
+.tm-calendar-week-day .tm-calendar-lane { left: 0; }
+
+.tm-calendar-resize-handle { position: absolute; left: 0; right: 0; height: 5px; cursor: ns-resize; touch-action: none; z-index: 2; }
+.tm-calendar-resize-handle.is-start { top: 0; }
+.tm-calendar-resize-handle.is-end { bottom: 0; }
+.tm-calendar-task.is-resizing { outline: 2px solid var(--interactive-accent); z-index: 4; }
+.tm-calendar-resize-preview { display: none; }
+.tm-calendar-task.is-resizing .tm-calendar-resize-preview { display: block; position: absolute; inset: 0; background: inherit; padding: 2px 4px; font-size: 11px; pointer-events: none; }
+
+button.tm-list-drag-handle { flex: 0 0 20px; width: 20px; padding: 0; color: var(--text-faint); cursor: grab; }
+.tm-task-row.is-dragging { opacity: .45; }
+/* The lifted row: it follows the pointer by transform (never transitioned), rises a little as it lifts,
+   and settles back to its size as it drops. */
+.tm-main-view .tm-task-row.tm-drag-preview {
+  position: fixed;
+  z-index: 10000;
+  margin: 0;
+  box-sizing: border-box;
+  opacity: 1;
+  border-radius: 8px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+  scale: 1.02;
+  transition: none;
+  animation: tm-drag-lift 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes tm-drag-lift {
+  from { scale: 1; box-shadow: 0 0 0 transparent, 0 0 0 transparent; }
+}
+.tm-main-view .tm-task-row.tm-drag-preview.is-settling {
+  scale: 1;
+  box-shadow: var(--shadow-s);
+  transition: scale 150ms cubic-bezier(0.2, 0, 0, 1), box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+/* It looks selected, but solid: the selection's tint over the view's background, so rows beneath never show through. */
+.tm-main-view .tm-task-row.tm-task-item.tm-drag-preview.is-selected:not(.tm-things-board-card) {
+  border-radius: 8px;
+  background: linear-gradient(var(--text-selection), var(--text-selection)), var(--background-primary);
+}
+/* While dragging, the pointer shows a closed hand everywhere. */
+body.tm-list-dragging, body.tm-list-dragging * { cursor: grabbing !important; }
+.tm-main-view .tm-task-row.tm-drag-preview,
+.tm-main-view .tm-task-row.tm-drag-preview * { pointer-events: none; }
+/* Outside the task view, which clips the lifted row, a label with the task's name follows the pointer instead. */
+.tm-main-view .tm-task-row.tm-drag-preview.is-outside { visibility: hidden; }
+.tm-drag-chip {
+  position: fixed;
+  z-index: var(--layer-dragged-item, 10000);
+  max-width: 240px;
+  padding: 4px 10px;
+  overflow: hidden;
+  border-radius: var(--radius-m, 6px);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* A note's headings, grouping a list or a board, drag to put its sections in another order: the grabbed title lifts
+   and follows the pointer, its group dims, and a line in the accent colour marks where it lands. */
+.tm-main-view .tm-heading-drag-preview {
+  position: fixed;
+  z-index: 10000;
+  margin: 0;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+  pointer-events: none;
+  transition: none;
+}
+.tm-main-view .tm-heading-drag-preview * { pointer-events: none; }
+.tm-main-view .is-heading-dragging > :not(.tm-heading-drag-preview) { opacity: .4; }
+.tm-main-view .tm-heading-draggable.is-drag-armed { border-radius: 8px; background: var(--background-modifier-hover); }
+.tm-heading-drop-line { position: fixed; z-index: 10000; border-radius: 2px; background: var(--interactive-accent); pointer-events: none; }
+.tm-heading-drop-line[hidden] { display: none; }
+body.tm-heading-dragging, body.tm-heading-dragging * { cursor: grabbing !important; user-select: none; }
+body.is-mobile .tm-main-view .tm-heading-draggable { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* On touch screens a long press lifts the row, ready to drag; it holds no text selection or callout. */
+.tm-main-view .tm-task-item.is-drag-armed { background: var(--background-modifier-hover); box-shadow: var(--shadow-l); }
+body.is-mobile .tm-main-view .tm-task-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Dragging lifts the rows out (their slots fold away, set on the rows themselves: see FOLDED in list-drag-view.ts)
+   and a grey gap shows where they will land. */
+/* The drop slot: a faint accent placeholder, inset a little from its neighbours, indented to the depth the
+   task will land at; nesting or outdenting slides it sideways. */
+.tm-drop-gap {
+  position: relative;
+  box-sizing: border-box;
+  height: var(--tm-gap-height, 32px);
+  margin-inline-start: calc(var(--tm-depth, 0) * 24px);
+  transition: margin-inline-start 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tm-drop-gap::before {
+  content: "";
+  position: absolute;
+  inset: 2px 0;
+  border: 1px dashed color-mix(in srgb, var(--interactive-accent) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-main-view .tm-task-row.tm-drag-preview { animation: none; scale: 1; }
+  .tm-main-view .tm-task-row.tm-drag-preview.is-settling, .tm-drop-gap { transition: none; }
+}
+.tm-kanban .tm-drop-gap { margin: 0 0 var(--size-4-2); }
+.tm-kanban .tm-drop-gap::before { inset: 0; border-radius: 10px; }
+/* How many tasks are being dragged, beside the pointer. */
+.tm-drag-count {
+  position: absolute;
+  z-index: 1;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-red);
+  color: var(--text-on-accent);
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  line-height: 16px;
+  text-align: center;
+}
+.tm-task-row[data-drop-position] { position: relative; }
+.tm-task-row[data-drop-position="before"] { box-shadow: inset 0 2px var(--interactive-accent); }
+.tm-task-row[data-drop-position="after"], .tm-task-row[data-drop-position="outdent"] { box-shadow: inset 0 -2px var(--interactive-accent); }
+.tm-task-row[data-drop-position="child"], .tm-section[data-drop-position="group"], .tm-task-list[data-drop-position="group"] { outline: 2px solid var(--interactive-accent); outline-offset: -2px; background: var(--background-modifier-hover); }
+.tm-task-row[data-drop-position="child"]::after, .tm-task-row[data-drop-position="outdent"]::after { position: absolute; right: 36px; bottom: 0; font-size: 10px; color: var(--text-accent); background: var(--background-primary); padding: 1px 4px; pointer-events: none; }
+.tm-task-row[data-drop-position="child"]::after { content: "Nest inside"; }
+.tm-task-row[data-drop-position="outdent"]::after { content: "Outdent"; }
+.tm-task-list:empty { min-height: 28px; }
+/* The list above a project's headings takes no space until a drag opens its gap. */
+.tm-task-list.tm-drop-only:empty { min-height: 0; }
+button.tm-list-drag-handle { touch-action: none; }
+
+.workspace-leaf-content[data-type="task-manager-main"] .view-content.tm-main-view.is-kanban-view { max-width: none; width: 100%; }
+.tm-kanban { display: flex; align-items: stretch; gap: 16px; overflow-x: auto; padding: 4px 2px 16px; min-height: 320px; }
+.tm-kanban-column { flex: 1 0 280px; min-width: 280px; max-width: 360px; background: transparent; border: 0; border-radius: 10px; padding: 12px; }
+.tm-kanban-column-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.tm-kanban-column-header h2 { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); margin: 0; overflow-wrap: anywhere; flex: 1; }
+.tm-kanban .tm-task-list { display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
+.tm-kanban .tm-task-row { grid-template-columns: 24px minmax(0, 1fr); align-items: start; padding: 10px; min-height: 72px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; margin-left: min(calc(var(--tm-depth) * 10px), 30px); }
+.tm-kanban .tm-task-content { display: flex; flex-direction: column; align-items: stretch; min-width: 0; gap: 8px; text-align: left; }
+.tm-kanban .tm-task-primary { align-items: flex-start; justify-content: flex-start; }
+.tm-kanban button.tm-task-title { height: auto; text-align: left; justify-content: flex-start; }
+.tm-kanban .tm-task-metadata { display: flex; flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
+.tm-kanban-column[data-drop-position="group"] { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.tm-kanban-empty { color: var(--text-muted); font-size: var(--font-ui-small); text-align: center; padding: 16px; pointer-events: none; }
+@media (max-width: 700px) { .tm-kanban .tm-checkbox-target { width: 24px; } .tm-kanban .tm-task-row { grid-template-columns: 24px minmax(0, 1fr); } }
+
+.tm-main-view .tm-list-drag-handle { display: none; }
+
+/* Let list properties use the row width and wrap instead of clipping. */
+.tm-main-view:not(.is-kanban-view) .tm-task-row:not(.tm-project-row) .tm-task-content {
+  display: flex;
+  flex-wrap: wrap;
+}
+.tm-main-view:not(.is-kanban-view) .tm-task-row:not(.tm-project-row) .tm-task-primary {
+  flex: 1 1 160px;
+}
+.tm-main-view:not(.is-kanban-view) .tm-task-metadata {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+@media (max-width: 700px) {
+  .tm-main-view:not(.is-kanban-view) .tm-task-row:not(.tm-project-row) .tm-task-primary,
+  .tm-main-view:not(.is-kanban-view) .tm-task-row:not(.tm-project-row) .tm-task-metadata { flex-basis: 100%; }
+}
+
+.tm-editor-actions button.tm-delete-task { margin-right: auto; flex: 0 0 auto; color: var(--text-error); }
+
+.tm-gantt-scroll { overflow: auto; max-height: 70vh; border: 1px solid var(--background-modifier-border); border-radius: 8px; --tm-gantt-label: 330px; }
+.tm-gantt-row { display: grid; grid-template-columns: var(--tm-gantt-label) var(--tm-gantt-width); width: max-content; min-height: 36px; }
+.tm-gantt-label { position: sticky; left: 0; z-index: 2; display: flex; align-items: center; justify-content: flex-start; padding: 4px 12px; background: var(--background-primary); border: 0; border-right: 1px solid var(--background-modifier-border); border-radius: 0; box-shadow: none; text-align: left; height: auto; white-space: normal; overflow-wrap: anywhere; }
+.tm-gantt-project { align-items: center; gap: 8px; padding-block: 9px; }
+.tm-gantt-project .tm-project-icon { flex-shrink: 0; padding-top: 0; }
+.tm-gantt-project .tm-project-icon > .tm-project-progress { align-self: center; min-height: 0; }
+.tm-gantt-project-content { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.tm-main-view .tm-gantt-project button.tm-task-title { height: auto; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.tm-main-view .tm-gantt-project .tm-project-header-metadata { display: flex; margin: 0; gap: 4px 8px; }
+.tm-gantt-project .tm-project-header-metadata[hidden] { display: none; }
+.tm-gantt-header { position: sticky; top: 0; z-index: 4; background: var(--background-secondary); }
+.tm-gantt-header .tm-gantt-label, .tm-gantt-group .tm-gantt-label { background: var(--background-secondary); font-weight: 600; }
+.tm-gantt-group { background: var(--background-secondary); min-height: 32px; }
+.tm-gantt-dates { display: flex; }
+.tm-gantt-date {
+  flex: 0 0 var(--tm-gantt-day); width: var(--tm-gantt-day); box-sizing: border-box; height: auto; padding: 4px 0 4px 8px;
+  border: 0; border-left: 1px solid var(--background-modifier-border); border-radius: 0; box-shadow: none; background: var(--background-secondary);
+  font-size: var(--font-ui-medium); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: clip;
+}
+.tm-gantt-track { position: relative; isolation: isolate; min-height: 36px; overflow: hidden; }
+/* Tints keep text-normal readable on every colour; the border and grips carry the hue. */
+button.tm-gantt-bar {
+  position: absolute; top: 4px; height: 28px; min-width: 0; padding: 3px 14px;
+  border: 1px solid color-mix(in srgb, var(--tm-project-color, var(--interactive-accent)) 40%, transparent); border-radius: 10px;
+  background: color-mix(in srgb, var(--tm-project-color, var(--interactive-accent)) 12%, var(--background-primary)); color: var(--text-normal);
+  font-size: var(--font-ui-small); text-align: left; justify-content: flex-start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.tm-gantt-row:is(.is-completed, .is-cancelled) .tm-gantt-bar { opacity: .55; text-decoration: line-through; }
+.tm-gantt-today { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--text-error); pointer-events: none; z-index: 3; }
+.tm-gantt-undated { display: inline-block; padding: 4px 12px; font-size: var(--font-ui-small); color: var(--text-muted); }
+button.tm-gantt-jump { margin: 4px 8px; height: 28px; font-size: var(--font-ui-small); }
+@media (max-width: 700px) { .tm-gantt-scroll { --tm-gantt-label: 225px; } }
+
+.tm-gantt-bar[hidden], .tm-gantt-handle[hidden], .tm-gantt-jump[hidden] { display: none; }
+button.tm-gantt-handle { position: absolute; top: 4px; height: 28px; width: 8px; min-width: 0; padding: 0; border: 0; border-radius: 2px; box-shadow: none; background: var(--text-on-accent); opacity: .65; cursor: ew-resize; touch-action: none; z-index: 2; }
+button.tm-gantt-handle:hover { opacity: 1; outline: none; box-shadow: none; }
+button.tm-gantt-handle:focus-visible { opacity: 1; outline: 2px solid var(--text-accent); }
+.tm-gantt-row.is-resizing .tm-gantt-bar { opacity: .8; }
+.tm-gantt-row:is(.is-completed, .is-cancelled) .tm-gantt-label { color: var(--text-muted); }
+
+/* Edge grips stay unobtrusive until the project row is hovered or focused. */
+button.tm-gantt-handle.is-start, button.tm-gantt-handle.is-finish { opacity: 0; }
+.tm-gantt-bar:hover ~ .tm-gantt-handle.is-start,
+.tm-gantt-bar:hover ~ .tm-gantt-handle.is-finish,
+button.tm-gantt-handle.is-start:hover,
+button.tm-gantt-handle.is-finish:hover,
+button.tm-gantt-handle.is-start:focus-visible,
+button.tm-gantt-handle.is-finish:focus-visible,
+.tm-gantt-row.is-resizing .tm-gantt-handle.is-start,
+.tm-gantt-row.is-resizing .tm-gantt-handle.is-finish { opacity: .85; }
+.tm-gantt-track.is-unscheduled { cursor: crosshair; touch-action: none; }
+.tm-gantt-selection { position: absolute; top: 4px; height: 28px; border-radius: 6px; background: var(--interactive-accent); color: var(--text-on-accent); opacity: .8; pointer-events: none; white-space: nowrap; overflow: hidden; font-size: 11px; padding: 4px; box-sizing: border-box; }
+.tm-gantt-selection[hidden] { display: none; }
+.tm-gantt-undated[hidden] { display: none; }
+
+/* Distinguish progress badges from light card surfaces without changing their size. */
+
+/* Native buttons center flex content; block text keeps truncation at the end. */
+.tm-main-view button.tm-task-title {
+  display: block;
+  max-width: 100%;
+  text-align: left;
+}
+.tm-main-view:not(.is-kanban-view):not(.is-calendar-view) .tm-task-row:not(.tm-project-row) button.tm-task-title {
+  height: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Keep Kanban titles rectangular, independent of theme button rounding. */
+.tm-main-view .tm-kanban button.tm-task-title {
+  border-radius: 6px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+  max-height: none;
+}
+
+/* Selected tasks take the theme's text selection colour, as selected text does. */
+.tm-main-view .tm-task-row.is-selected,
+.tm-main-view .tm-calendar .tm-calendar-task.is-selected {
+  background: var(--text-selection);
+  box-shadow: none;
+  border-color: transparent;
+  border-radius: 6px;
+}
+.tm-main-view .tm-calendar .tm-calendar-task.is-selected {
+  background: color-mix(in srgb, var(--tm-project-color, var(--interactive-accent)) 12%, var(--background-primary));
+}
+
+/* No separate "active" row: the arrow keys move the selection, so a focused row looks like any other. */
+.tm-main-view .tm-task-item:focus-visible { outline: none; }
+
+/* Titles never wrap, in any layout: a long one ends with an ellipsis, clipped within the title only. */
+.tm-main-view .tm-kanban button.tm-task-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tm-main-view .tm-calendar .tm-calendar-task { max-width: 100%; }
+.tm-main-view .tm-calendar .tm-calendar-task-title {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-filter-clause { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+.tm-filter-clause select.tm-filter-join { width: auto; min-width: 78px; flex: 0 0 auto; }
+.tm-filter-clause select[hidden] { display: none; }
+
+
+.tm-main-view:not(.is-kanban-view):not(.is-calendar-view) .tm-task-row:not(.tm-project-row) {
+  min-height: var(--font-text-size, 16px);
+}
+
+/* Breathing room between a task title and the first icon that follows it. */
+.tm-task-primary > button.tm-task-title + .tm-task-recurring { margin-inline-start: 3px; }
+
+.tm-project-header-metadata .tm-project-progress { flex-shrink: 0; align-self: center; min-height: 0; }
+
+.tm-gantt-scroll { overflow-x: auto; overflow-anchor: none; }
+.tm-gantt-today[hidden] { display: none; }
+.tm-gantt-track .tm-gantt-jump,
+.tm-gantt-track .tm-gantt-undated { position: sticky; left: calc(var(--tm-gantt-label) + 8px); }
+
+/* Settings follow the active Obsidian theme and remain scoped to this plugin. */
+.tm-settings-section { margin-bottom: 28px; container-type: inline-size; }
+.tm-settings-section .setting-item-heading { padding: 0 0 12px; margin-top: 0; border-top: 0; }
+.tm-settings-section .setting-item-heading .setting-item-name { color: var(--text-accent); font-size: var(--font-ui-medium); font-weight: 600; }
+.tm-settings-row { gap: 20px; padding: 16px 0; }
+.tm-settings-row .setting-item-info { min-width: 0; margin-right: 0; }
+.tm-settings-row .setting-item-name { font-weight: 500; }
+.tm-settings-row .setting-item-description { margin-top: 5px; line-height: 1.5; color: var(--text-muted); }
+.tm-settings-row .setting-item-control { gap: 8px; }
+.tm-settings-row input[type="text"], .tm-settings-row select { max-width: 100%; border-radius: 6px; }
+@container (max-width: 420px) {
+  .tm-settings-row { flex-wrap: wrap; gap: 12px; }
+  .tm-settings-row .setting-item-control { max-width: 100%; }
+}
+
+/* Reference task rows: a title line and a quiet, left-aligned detail line. */
+.tm-main-view .tm-task-row.tm-task-item {
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  padding-top: 9px;
+  padding-bottom: 9px;
+  gap: 0 8px;
+}
+.tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { align-self: start; padding-top: 3px; }
+.tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-content {
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-smaller);
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 2px;
+  padding: 0;
+  min-width: 0;
+}
+.tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary {
+  font-size: inherit;
+  display: flex;
+  flex: initial;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) button.tm-task-title {
+  flex: 0 1 auto;
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-weight: 400;
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+}
+.tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-metadata {
+  display: flex;
+  flex: initial;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 4px 8px;
+  max-width: 100%;
+  overflow: visible;
+  color: var(--color-base-60);
+  font-family: var(--font-interface);
+  font-size: inherit;
+  line-height: 1.4;
+}
+.tm-task-schedule, .tm-task-source, .tm-task-tag { cursor: pointer; }
+.tm-task-schedule .is-overdue { color: var(--text-error); }
+.tm-task-source { overflow-wrap: anywhere; }
+.tm-task-source::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  margin-inline-end: 5px;
+  border-radius: 2px;
+  vertical-align: -0.12em;
+  /* The note's project colour, set on the row or header as --tm-project-color. */
+  background: var(--tm-project-color, var(--interactive-accent));
+}
+.tm-task-tag, .tm-task-due { display: inline-flex; align-items: center; gap: 4px; }
+.tm-task-tag { max-width: 100%; overflow-wrap: anywhere; }
+.tm-task-detail-icon, .tm-task-recurring { display: inline-flex; align-items: center; flex-shrink: 0; }
+/* An icon's pill (a tag) sits on the line's baseline by its text, as the properties without an icon do:
+   left to its icon, it would sit on the icon's bottom edge instead, higher than the rest. */
+.tm-task-metadata .tm-task-detail-icon + span { align-self: baseline; }
+.tm-task-detail-icon svg, .tm-task-recurring svg { width: 0.95em; height: 0.95em; }
+.tm-task-recurring { color: var(--text-muted); }
+.tm-task-due {
+  padding: 2px 5px;
+
+  color: var(--color-orange);
+  font-size: var(--font-ui-small);
+  font-weight: normal;
+  line-height: 1.3;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tm-main-view .tm-task-item :is(.tm-task-due, .tm-task-schedule, .tm-task-source, .tm-task-tag),
+.tm-main-view .tm-task-item :is(.tm-task-due, .tm-task-schedule, .tm-task-source, .tm-task-tag) > span { font-size: inherit; }
+.tm-task-schedule:hover, .tm-task-source:hover, .tm-task-tag:hover { color: var(--text-normal); }
+
+/* Griply style, after Griply: accent group headings over a divider, with the collapse chevron at the right (pointing down
+   while open); a slightly larger detail line; a tinted deadline pill. */
+.tm-main-view.tm-style-griply .tm-section h2 {
+  padding-bottom: var(--size-4-2);
+  margin-bottom: var(--size-4-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-accent);
+}
+.tm-main-view.tm-style-griply .tm-section.is-alert h2 { color: var(--text-error); }
+/* A board's columns head their cards as a list's groups do, and its cards stand raised off the board, as Griply's do. */
+.tm-main-view.tm-style-griply .tm-kanban-column-header { padding-bottom: var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); }
+.tm-main-view.tm-style-griply .tm-kanban-column-header h2 { color: var(--text-accent); }
+.tm-main-view.tm-style-griply .tm-kanban-column.is-alert .tm-kanban-column-header h2 { color: var(--text-error); }
+.tm-main-view.tm-style-griply .tm-kanban .tm-task-row {
+  border: 0;
+  border-radius: 10px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s), inset 0 0 0 1px color-mix(in srgb, var(--text-normal) 6%, transparent);
+}
+.tm-main-view.tm-style-griply .tm-kanban .tm-task-row.has-project-color { box-shadow: inset 3px 0 0 var(--tm-project-color), var(--shadow-s), inset 0 0 0 1px color-mix(in srgb, var(--text-normal) 6%, transparent); }
+/* The selection colour is laid over the card, which keeps its own background (and its lift) beneath. */
+.tm-main-view.tm-style-griply .tm-kanban .tm-task-row.is-selected { background: linear-gradient(var(--text-selection), var(--text-selection)), var(--background-primary); }
+.tm-main-view.tm-style-griply button.tm-group-fold {
+  position: static;
+  order: 99;
+  margin-inline-start: auto;
+  opacity: 1;
+  transform: none;
+}
+.tm-main-view.tm-style-griply .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-content { font-size: var(--font-ui-small); }
+/* The properties under the title (and a project's dates under its name) are a step smaller than what sits beside the title. */
+.tm-main-view.tm-style-griply .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-metadata,
+.tm-main-view.tm-style-griply .tm-project-row .tm-project-header-metadata { font-size: var(--font-ui-smaller); }
+/* The checkbox sits in a box as tall as the title's first line, centred on it whatever the checkbox's size, so it stays
+   level with the title with or without properties below (and in narrow windows, with its wider tap area). */
+.tm-main-view.tm-style-griply .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { height: calc(var(--font-ui-medium) * 1.4); min-height: 0; padding-top: 0; }
+.tm-main-view.tm-style-griply .tm-task-due {
+  padding: 1px 8px 1px 7px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+.tm-main-view.tm-style-griply .tm-task-due .tm-task-detail-icon svg { fill: currentColor; }
+/* A repeat, and notes, show as icons beside the title. */
+.tm-task-primary > .tm-task-repeat { color: var(--text-faint); }
+.tm-task-primary > .tm-task-repeat:hover { color: var(--text-normal); }
+.tm-task-notes-mark { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--text-faint); }
+.tm-task-notes-mark svg { width: 0.95em; height: 0.95em; }
+.tm-task-checkbox.is-p1 { --tm-priority-color: var(--text-error); }
+.tm-task-checkbox.is-p2 { --tm-priority-color: var(--color-orange); }
+.tm-task-checkbox.is-p3 { --tm-priority-color: var(--color-blue); }
+.tm-main-view input.tm-task-checkbox:is(.is-p1, .is-p2, .is-p3) {
+  --checkbox-color: var(--tm-priority-color);
+  --checkbox-color-hover: var(--tm-priority-color);
+  --checkbox-border-color: var(--tm-priority-color);
+  --checkbox-border-color-hover: var(--tm-priority-color);
+  accent-color: var(--tm-priority-color);
+  border-color: var(--tm-priority-color);
+}
+.tm-main-view input.tm-task-checkbox:is(.is-p1, .is-p2, .is-p3):checked { background: var(--tm-priority-color); }
+
+/* Task statuses: in progress is half filled, waiting has a dashed box with a dot, cancelled is muted with a cross.
+   In the task view and editor, in progress and waiting are unchecked and cancelled is checked. */
+input.tm-task-checkbox.is-doing:not(:checked) {
+  border-color: var(--checkbox-color);
+  background-image: linear-gradient(90deg, var(--checkbox-color) 50%, transparent 50%);
+}
+input.tm-task-checkbox.is-waiting:not(:checked) {
+  border-style: dashed;
+  background-image: radial-gradient(circle, var(--tm-priority-color, var(--text-muted)) 0 18%, transparent 24%);
+}
+input.tm-task-checkbox.is-cancelled {
+  --checkbox-color: var(--text-faint);
+  --checkbox-color-hover: var(--text-muted);
+  /* Also mutes a priority colour. */
+  --tm-priority-color: var(--text-faint);
+}
+input.tm-task-checkbox.is-cancelled:checked::after {
+  -webkit-mask-size: 55%;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M2 2l6 6M8 2l-6 6' stroke='black' stroke-width='1.8' stroke-linecap='round'/></svg>");
+}
+.tm-task-row.is-cancelled .tm-task-title { color: var(--text-faint); }
+
+/* The same statuses in notes, where Obsidian draws any character but a space as a checked box. Every rule has zero
+   specificity, so a theme that styles `[/]`, `[?]` or `[-]` itself wins. The unfilled parts are painted over the fill. */
+:where(input.task-list-item-checkbox:is([data-task="/"], [data-task="?"], [data-task="-"])) { --checkbox-marker-color: transparent; }
+:where(input.task-list-item-checkbox[data-task="/"]) {
+  background-image: linear-gradient(90deg, transparent 50%, var(--background-primary) 50%);
+}
+:where(input.task-list-item-checkbox[data-task="?"]) {
+  --checkbox-color: var(--text-muted);
+  --checkbox-color-hover: var(--text-normal);
+  background-image: radial-gradient(circle, transparent 0 20%, var(--background-primary) 25%);
+}
+:where(input.task-list-item-checkbox[data-task="-"]) {
+  --checkbox-color: var(--text-faint);
+  --checkbox-color-hover: var(--text-muted);
+  background-image: linear-gradient(to top right, var(--background-primary) calc(50% - 1px), transparent calc(50% - 1px) calc(50% + 1px), var(--background-primary) calc(50% + 1px));
+}
+:where(ul > li.task-list-item[data-task="-"], .markdown-source-view.mod-cm6 .HyperMD-task-line[data-task="-"]) {
+  text-decoration: var(--checklist-done-decoration);
+  color: var(--checklist-done-color);
+}
+@media (max-width: 700px) {
+  .tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { width: 22px; }
+  .tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary,
+  .tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-metadata { flex-basis: auto; }
+}
+
+/* Project headers share the task row's quiet metadata and compact deadline badge. */
+.tm-main-view .tm-project-header-metadata {
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.tm-project-date-range { display: inline-flex; flex-wrap: wrap; gap: 0 4px; align-items: baseline; }
+.tm-project-date-range [role="button"] { cursor: pointer; }
+.tm-project-date-range [role="button"]:hover { color: var(--text-normal); }
+.tm-project-header-metadata > .tm-project-progress:not(:first-child) { margin-inline-start: 4px; }
+
+.tm-task-due.is-overdue { color: var(--text-error); }
+
+:is(.tm-note-task-item, .tm-note-task-line)[data-tm-priority="1"] { --tm-note-priority: var(--text-error); }
+:is(.tm-note-task-item, .tm-note-task-line)[data-tm-priority="2"] { --tm-note-priority: var(--color-orange); }
+:is(.tm-note-task-item, .tm-note-task-line)[data-tm-priority="3"] { --tm-note-priority: var(--color-blue); }
+:is(.tm-note-task-item, .tm-note-task-line) input[type="checkbox"] {
+  --checkbox-color: var(--tm-note-priority, var(--interactive-accent));
+  --checkbox-color-hover: var(--tm-note-priority, var(--interactive-accent-hover));
+  --checkbox-border-color: var(--tm-note-priority, var(--background-modifier-border-hover));
+  --checkbox-border-color-hover: var(--tm-note-priority, var(--interactive-accent));
+  accent-color: var(--tm-note-priority, var(--interactive-accent));
+  border-color: var(--checkbox-border-color);
+}
+/* Prevent an unprioritized nested task from inheriting its parent's priority. */
+li.task-list-item { --tm-note-priority: initial; }
+
+/* Gantt rows retain one line for the title and one for its properties. */
+.tm-main-view .tm-gantt-project button.tm-task-title { display: block; width: 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-main-view .tm-gantt-project .tm-project-header-metadata { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+.tm-gantt-project .tm-project-date-range { flex-wrap: nowrap; flex-shrink: 0; }
+.tm-gantt-project .tm-task-source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-gantt-project .tm-task-due { flex-shrink: 0; }
+.tm-gantt-grid { position: absolute; inset: 0; pointer-events: none; }
+.tm-gantt-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--background-modifier-border); }
+
+/* Compact single-line Gantt labels and independent date controls. */
+.tm-gantt-project-content { flex-direction: row; align-items: center; gap: 10px; }
+.tm-main-view .tm-gantt-project button.tm-task-title { flex: 1 1 auto; width: auto; min-height: 0; padding-block: 0; }
+.tm-main-view .tm-gantt-project .tm-project-header-metadata { flex: 0 1 auto; min-width: 0; }
+/* A year's first month (or week) names the year beside it. */
+.tm-gantt-year { margin-left: 4px; font-weight: var(--font-semibold); color: var(--text-normal); }
+button.tm-gantt-handle.is-start, button.tm-gantt-handle.is-finish { top: 10px; height: 16px; width: 10px; background: transparent; border-radius: 2px; }
+button.tm-gantt-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 3px; border-radius: 2px; background: var(--interactive-accent); }
+
+/* Accent progress and the compact calendar surface. */
+.tm-project-progress-circle { color: var(--interactive-accent); }
+.tm-calendar-body { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.tm-calendar-surface { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+.tm-calendar-toolbar { gap: 4px; padding: 8px 0; margin-bottom: 12px; }
+.tm-calendar-toolbar h2 { order: -2; font-size: var(--font-ui-large); }
+.tm-calendar-scopes { order: -1; display: flex; padding: 3px; border-radius: 20px; background: var(--background-modifier-hover); margin-right: 8px; }
+.tm-calendar-scopes button { border: 0; box-shadow: none; border-radius: 16px; background: transparent; color: var(--text-muted); padding: 3px 10px; }
+.tm-calendar-scopes button[aria-pressed="true"] { background: var(--background-primary); color: var(--text-normal); }
+.tm-calendar .tm-calendar-grid { border-left: 0; }
+.tm-calendar.is-month-scope .tm-calendar-surface > .tm-calendar-grid { flex: 1; min-height: 0; grid-template-rows: auto repeat(6, minmax(80px, 1fr)); overflow: auto; }
+.tm-calendar-cell { border-color: var(--background-modifier-border); padding: 3px; }
+.tm-calendar-cell.is-outside { background: transparent; }
+.tm-calendar-cell > .tm-calendar-date { display: block; margin-left: auto; font-size: var(--font-ui-medium); }
+.tm-calendar-cell.is-today > .tm-calendar-date { background: var(--text-error); color: var(--text-on-accent); border-radius: 5px; }
+.tm-calendar.is-month-scope .tm-calendar-cell.is-today > .tm-calendar-date { background: transparent; color: var(--text-error); }
+.tm-calendar-weekday { font-size: var(--font-ui-medium); color: var(--text-muted); padding: 12px 2px; }
+.tm-calendar .tm-calendar-week { min-width: 700px; }
+.tm-calendar .tm-calendar-week.is-four-day { min-width: 420px; }
+.tm-calendar-week.is-four-day .tm-calendar-week-header { grid-template-columns: 56px repeat(4, minmax(0, 1fr)); }
+.tm-calendar-week.is-four-day .tm-calendar-week-columns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tm-calendar-week-heading { padding: 4px 3px; }
+.tm-calendar-week-heading > .tm-calendar-date { font-size: var(--font-ui-medium); padding: 12px 2px; margin-bottom: 5px; color: var(--text-muted); }
+.tm-calendar-week-heading.is-today > .tm-calendar-date { color: var(--text-error); }
+.tm-calendar .tm-calendar-day-scroll { border: 0; }
+.tm-calendar .tm-calendar-task:not(.is-timed) { position: relative; }
+.tm-calendar .tm-calendar-task { display: flex; align-items: center; gap: 5px; border: 0; border-radius: 5px; background: color-mix(in srgb, var(--tm-project-color, var(--interactive-accent)) 22%, var(--background-primary)); color: color-mix(in srgb, var(--tm-project-color, var(--interactive-accent)) 55%, var(--text-normal)); padding: 3px 5px; min-height: 24px; height: auto; font-size: var(--font-ui-small); line-height: 1.35; }
+.tm-calendar .tm-calendar-task-title { display: block; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left; }
+.tm-calendar-check.is-p1 { --tm-priority-color: var(--text-error); }
+.tm-calendar-check.is-p2 { --tm-priority-color: var(--color-orange); }
+.tm-calendar-check.is-p3 { --tm-priority-color: var(--color-blue); }
+.tm-calendar-check { flex-shrink: 0; width: 11px; height: 11px; border: 1.5px solid var(--tm-priority-color, var(--tm-project-color, var(--interactive-accent))); border-radius: 4px; }
+.tm-calendar-task.is-completed .tm-calendar-check { background: var(--tm-priority-color, var(--tm-project-color, var(--interactive-accent))); }
+/* A project among the calendar's tasks: its progress, at the checkbox's size, stands in for the checkbox. */
+.tm-calendar-project-progress { display: inline-flex; flex-shrink: 0; }
+.tm-calendar-project-progress .tm-project-progress { min-height: 0; font-size: 12px; }
+.tm-calendar-task.is-project .tm-calendar-task-title { font-weight: var(--font-semibold); }
+.tm-calendar-task-flag { display: inline-flex; color: var(--tm-project-color, var(--interactive-accent)); }
+.tm-calendar-task-flag svg { width: 12px; height: 12px; fill: currentColor; }
+.tm-calendar-task-time { display: none; }
+.tm-calendar .tm-calendar-task.is-timed { display: block; text-align: left; padding-left: 23px; }
+.tm-calendar-task.is-timed .tm-calendar-check { position: absolute; top: 5px; left: 5px; }
+.tm-calendar-task.is-timed .tm-calendar-task-time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-calendar-task.is-timed .tm-calendar-task-flag { position: absolute; right: 4px; top: 5px; }
+.tm-calendar-now { position: absolute; left: 0; right: 0; height: 1px; background: var(--text-error); z-index: 3; pointer-events: none; }
+@media (max-width: 700px) {
+  .tm-calendar-toolbar { flex-wrap: wrap; }
+  .tm-calendar-scopes { width: auto; }
+}
+.tm-calendar-toolbar h2 { flex: 0 1 33%; margin-right: auto; }
+.tm-calendar .tm-calendar-task.is-timed { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; }
+.tm-calendar-task.is-timed .tm-calendar-task-title { flex: 0 0 auto; }
+
+/* Align progress with the title line and keep percentages snug. */
+.tm-main-view .tm-project-row .tm-task-primary > .tm-task-due { flex-shrink: 0; }
+.tm-main-view .tm-project-row button.tm-task-title { height: auto; min-height: 0; padding-block: 0; line-height: 1.4; }
+.tm-main-view .tm-project-row > .tm-project-icon { margin: 0; height: 1.4em; font-size: var(--font-ui-medium); align-items: center; }
+/* A row with nothing under its name sits in the middle of the row, so its progress (or icon) does too, level with the name. */
+.tm-main-view .tm-project-row.is-single-line > .tm-project-icon { align-self: center; }
+.tm-project-header-metadata .tm-project-progress { gap: 4px; min-height: 0; }
+.tm-project-percentage { min-width: 0; text-align: left; }
+/* Each grid edge is drawn once. */
+.tm-calendar .tm-calendar-cell { border: 0; border-top: 1px solid var(--background-modifier-border); border-right: 1px solid var(--background-modifier-border); }
+.tm-calendar .tm-calendar-week-header { border-bottom: 1px solid var(--background-modifier-border); }
+.tm-calendar .tm-calendar-scopes { height: var(--input-height, 30px); box-sizing: border-box; padding: 2px; gap: 2px; align-items: center; }
+.tm-calendar .tm-calendar-scopes button { height: 100%; min-height: 0; padding: 0 10px; line-height: normal; }
+.tm-calendar .tm-calendar-scopes button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+@media (max-width: 700px) {
+  .tm-main-view .tm-project-row > .tm-project-icon { justify-self: center; }
+  .tm-main-view .tm-project-row > .tm-project-icon > .tm-project-progress { align-self: center; }
+  .tm-main-view .tm-project-row .tm-task-primary { align-items: center; }
+}
+
+/* Calendar controls stay centered independently of the heading. */
+.tm-calendar .tm-calendar-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.tm-calendar .tm-calendar-toolbar h2 { grid-column: 1; grid-row: 1; margin: 0; }
+.tm-calendar-controls { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 4px; }
+.tm-calendar-controls > button { border: 0; box-shadow: none; border-radius: 16px; background: var(--background-modifier-hover); }
+.tm-calendar-controls button:hover { background: var(--background-modifier-hover); }
+/* Keep a visible keyboard focus indicator on the otherwise invisible resize handles. */
+.tm-calendar-resize-handle:focus-visible { outline: 2px solid var(--background-modifier-border-focus, var(--interactive-accent)); outline-offset: -2px; border-radius: 2px; }
+.tm-calendar .tm-calendar-grid { border-left: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); }
+/* A month's line on the left starts below its weekdays: the first day of each week draws it, not the grid. */
+.tm-calendar .tm-calendar-grid:not(.is-compact) { border-left: 0; }
+.tm-calendar .tm-calendar-grid:not(.is-compact) > .tm-calendar-cell:nth-child(7n+1) { border-left: 1px solid var(--background-modifier-border); }
+.tm-calendar .tm-calendar-cell.is-outside > .tm-calendar-date { color: var(--text-faint, var(--text-muted)); opacity: .5; }
+.tm-calendar input.tm-calendar-check { margin: 0; padding: 0; appearance: none; width: 12px; height: 12px; min-width: 12px; --checkbox-color: var(--tm-priority-color, var(--tm-project-color, var(--interactive-accent))); --checkbox-border-color: var(--tm-priority-color, var(--tm-project-color, var(--interactive-accent))); cursor: pointer; }
+.tm-calendar input.tm-calendar-check:checked { background: var(--tm-priority-color, var(--tm-project-color, var(--interactive-accent))); }
+@media (max-width: 700px) {
+  .tm-calendar .tm-calendar-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .tm-calendar .tm-calendar-controls { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+}
+
+/* Gantt navigation mirrors the centered calendar controls. */
+.tm-gantt-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.tm-gantt-toolbar .tm-calendar-scopes { height: var(--input-height, 30px); box-sizing: border-box; padding: 2px; gap: 2px; align-items: center; }
+.tm-gantt-toolbar .tm-calendar-scopes button { height: 100%; min-height: 0; padding: 0 10px; line-height: normal; }
+.tm-gantt-toolbar button:hover { background: var(--background-modifier-hover); }
+/* Zoom out and in, at the toolbar's right; the right button drags the timeline. */
+.tm-gantt-zoom { grid-column: 3; grid-row: 1; justify-self: end; display: flex; gap: 2px; }
+.tm-gantt-scroll.is-panning { cursor: grabbing; user-select: none; }
+@media (max-width: 700px) {
+  .tm-gantt-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .tm-gantt-toolbar .tm-calendar-controls { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+  .tm-gantt-zoom { grid-column: 2; }
+}
+
+/* A task view's deadline pill. */
+.tm-task-due {
+  /* The border follows the deadline's text colour: upcoming, overdue, or distant. */
+  border: 0.5px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+}
+.tm-task-due.is-distant { color: var(--text-muted); }
+
+.tm-editor-task-line {
+  display: flex;
+  align-items: first baseline;
+  gap: 10px;
+}
+
+
+.tm-editor-task-line > [hidden] { display: none; }
+.tm-editor-modal .tm-editor-error:empty { display: none; }
+
+/* One plain text field: what it sets is highlighted, never replaced. */
+.tm-editor-inline { flex: 1; min-width: 0; }
+.tm-editor-inline .cm-editor { background: transparent; font-family: var(--font-text); font-size: var(--font-text-size); }
+.tm-editor-inline .cm-editor.cm-focused { outline: none; }
+.tm-editor-inline .cm-scroller { overflow: visible; font-family: inherit; }
+.tm-editor-inline .cm-content { padding: 8px 0; min-height: 40px; overflow-wrap: anywhere; }
+.tm-editor-inline .cm-line { padding: 0; }
+.tm-editor-inline .cm-content:focus { outline: none; }
+.tm-editor-inline .cm-content {
+  caret-color: var(--caret-color, var(--text-normal));
+}
+.tm-editor-inline .cm-cursor,
+.tm-editor-inline .cm-dropCursor {
+  border-left-color: var(--caret-color, var(--text-normal));
+}
+
+/* The editor's one text field, beside its checkbox. */
+.tm-editor-modal { width: min(640px, calc(100vw - 32px)); }
+.tm-editor-modal .modal-content { padding-top: 10px; }
+.tm-editor-task-line { gap: 12px; }
+.tm-editor-inline .cm-content { line-height: 1.65; padding-block: 4px; }
+.tm-editor-modal .tm-editor-raw-field { margin-bottom: 12px; }
+.tm-editor-modal > .tm-editor-actions { margin-top: 12px; }
+
+
+.tm-editor-modal .tm-editor-actions button.tm-editor-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.tm-editor-icon-action svg { width: 18px; height: 18px; }
+@media (max-width: 700px) {
+  .tm-editor-modal .tm-editor-actions button.tm-editor-icon-action {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.tm-show-more-tasks {
+  display: block;
+  margin: 8px auto;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Visually hidden text that stays available to assistive technology. */
+.tm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Calendar task titles are buttons that look like plain text. */
+.tm-calendar button.tm-calendar-task-title {
+  appearance: none;
+  justify-content: flex-start;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  box-shadow: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: inherit;
+}
+.tm-calendar button.tm-calendar-task-title:hover { background: none; box-shadow: none; }
+.tm-calendar button.tm-calendar-task-title:focus-visible { outline: 2px solid var(--background-modifier-border-focus, var(--interactive-accent)); outline-offset: 1px; box-shadow: none; }
+
+/* Gantt undated tracks open the project editor from the keyboard. */
+.tm-gantt-track.is-unscheduled:focus-visible { outline: 2px solid var(--background-modifier-border-focus, var(--interactive-accent)); outline-offset: -2px; }
+
+/* At least 24px hit areas for date and time handles, without changing what is drawn. */
+button.tm-gantt-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+}
+@media (pointer: coarse) {
+  /* Extend outward from each edge; the card must not clip the outer part. */
+  .tm-calendar-resize-handle::before { content: ""; position: absolute; left: 0; right: 0; height: 24px; }
+  .tm-calendar-resize-handle.is-start::before { top: -19px; }
+  .tm-calendar-resize-handle.is-end::before { bottom: -19px; }
+  .tm-calendar .tm-calendar-task.is-timed { overflow: visible; }
+  .tm-calendar .tm-calendar-task.is-timed > .tm-calendar-task-title,
+  .tm-calendar .tm-calendar-task.is-timed > .tm-calendar-task-time { flex-shrink: 1; min-height: 0; overflow: hidden; }
+}
+/* Without hover, the start and end grips would never appear. */
+@media (hover: none) {
+  button.tm-gantt-handle.is-start, button.tm-gantt-handle.is-finish { opacity: .85; }
+}
+
+/* Undo button inside a notice. */
+.notice .tm-undo-button {
+  margin-left: var(--size-4-2);
+  padding: var(--size-2-1) var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+/* Project colors */
+/* --tm-project-color is set inline from a validated colour; Obsidian's --color-* adapt to light and dark themes. */
+.tm-project-progress-circle { color: var(--tm-project-color, var(--interactive-accent)); }
+button.tm-gantt-bar.tm-project-colored { background: color-mix(in srgb, var(--tm-project-color) 20%, var(--background-primary)); border-color: color-mix(in srgb, var(--tm-project-color) 60%, transparent); }
+button.tm-gantt-handle::after { background: var(--tm-project-color, var(--interactive-accent)); }
+.tm-project-color-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.tm-project-color-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+button.tm-project-color-swatch, button.tm-project-color-swatch:hover {
+  width: 22px; height: 22px; min-width: 0; padding: 0; border: 1px solid var(--background-modifier-border); border-radius: 50%;
+  background: var(--tm-project-color); box-shadow: none; cursor: pointer;
+}
+button.tm-project-color-swatch.is-none, button.tm-project-color-swatch.is-none:hover {
+  background: linear-gradient(to top right, transparent calc(50% - 1px), var(--text-faint) calc(50% - 1px), var(--text-faint) calc(50% + 1px), transparent calc(50% + 1px)), var(--background-primary);
+}
+button.tm-project-color-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--text-normal); }
+button.tm-project-color-swatch:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 4px; }
+.tm-editor-field input.tm-project-color-hex { width: 10ch; flex: none; font-family: var(--font-monospace); }
+@media (pointer: coarse) { button.tm-project-color-swatch, button.tm-project-color-swatch:hover { width: 32px; height: 32px; } }
+
+/* Density */
+/* Compact tightens spacing only; font sizes stay as in the comfortable layout. */
+.tm-density-compact .tm-task-row { min-height: 32px; padding-top: 2px; padding-bottom: 2px; }
+.tm-density-compact .tm-task-row.tm-task-item { padding-top: 3px; padding-bottom: 3px; gap: 0 6px; }
+.tm-density-compact .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { padding-top: 2px; }
+.tm-density-compact .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-content { gap: 0; }
+.tm-density-compact .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary { gap: 4px; }
+.tm-density-compact .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-metadata { gap: 2px 6px; }
+.tm-density-compact .tm-task-metadata,
+.tm-density-compact .tm-project-header-metadata { gap: 2px 6px; }
+.tm-density-compact .tm-section { margin-bottom: var(--size-4-4); }
+.tm-density-compact .tm-task-list:not(.tm-drop-only) + .tm-section { margin-top: var(--size-4-4); }
+.tm-density-compact .tm-section h2 { margin-bottom: var(--size-4-1); }
+.tm-density-compact .tm-kanban { gap: 10px; }
+.tm-density-compact .tm-kanban-column { padding: 8px; }
+.tm-density-compact .tm-kanban-column-header { margin-bottom: 6px; }
+.tm-density-compact .tm-kanban .tm-task-list { gap: 4px; }
+.tm-density-compact .tm-kanban .tm-task-row { min-height: 48px; padding: 6px 8px; }
+.tm-density-compact .tm-kanban .tm-task-content { gap: 4px; }
+.tm-density-compact .tm-calendar-cell { padding: 2px; }
+.tm-density-compact .tm-calendar .tm-calendar-task:not(.is-timed) { margin: 1px 0; padding: 0 3px; }
+.tm-density-compact.tm-navigation { padding-block: var(--size-4-2); }
+.tm-density-compact.tm-navigation .tm-nav-item { min-height: 24px; }
+.tm-density-compact.tm-navigation button.tm-nav-label { padding: 2px 0; }
+@media (max-width: 700px) {
+  .tm-density-compact.tm-navigation button.tm-nav-label { min-height: 32px; }
+}
+/* Touch targets stay at least 32px tall. */
+@media (pointer: coarse) {
+  .tm-density-compact .tm-task-row.tm-task-item { padding-top: 6px; padding-bottom: 6px; }
+  .tm-density-compact.tm-navigation .tm-nav-item,
+  .tm-density-compact.tm-navigation button.tm-nav-label { min-height: 32px; }
+}
+/* In narrow windows and on touch screens a row's checkbox stays on its title's first line, as on desktop; the tap area
+   reaches past it instead of the checkbox moving down to the middle of a taller target. */
+@media (max-width: 700px), (pointer: coarse) {
+  .tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { position: relative; height: auto; min-height: 0; padding-top: 2px; }
+  .tm-main-view .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target::before { content: ""; position: absolute; inset: -11px -10px; }
+}
+
+/* Mobile bottom sheet */
+body .modal-container.tm-editor-container.tm-bottom-sheet-container,
+body .modal-container.tm-bottom-sheet-container {
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+/* The container already ends above the keyboard, so 100% keeps the sheet clear of it. */
+body .modal-container .modal.tm-bottom-sheet.tm-bottom-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  max-height: min(85vh, 100%);
+  margin: 0;
+  padding-top: 28px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-bottom: 0;
+  border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* Handle drags are read as pointer events rather than scrolling the page. */
+  touch-action: none;
+  animation: tm-sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+body .modal-container .modal.tm-bottom-sheet::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--background-modifier-border-hover, var(--text-faint));
+}
+body .modal-container .modal.tm-bottom-sheet .modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0;
+}
+body .modal-container .modal.tm-bottom-sheet > .tm-editor-actions { flex-shrink: 0; }
+@keyframes tm-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+/* On phones the task editor hangs from the top instead, its handle at the bottom; an upward swipe closes it. */
+body .modal-container.tm-bottom-sheet-container.is-top { align-items: flex-start; }
+body .modal-container .modal.tm-bottom-sheet.tm-bottom-sheet.is-top {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 28px;
+  border-top: 0;
+  border-bottom: var(--modal-border-width, 1px) solid var(--modal-border-color, var(--background-modifier-border));
+  border-radius: 0 0 var(--radius-xl, 16px) var(--radius-xl, 16px);
+  animation-name: tm-sheet-down;
+}
+body .modal-container .modal.tm-bottom-sheet.is-top::before { top: auto; bottom: 10px; }
+@keyframes tm-sheet-down {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .modal-container .modal.tm-bottom-sheet.tm-bottom-sheet { animation: none; }
+}
+
+/* Task view: project colours, swipe gestures */
+.tm-kanban .tm-task-row.has-project-color { box-shadow: inset 3px 0 0 var(--tm-project-color); }
+
+/* Rows scroll vertically on touch; horizontal drags become swipes. */
+.tm-task-item { touch-action: pan-y pinch-zoom; }
+.tm-task-item.is-swiping { overflow: hidden; }
+.tm-task-item.is-swiping > * { transform: translateX(var(--tm-swipe-offset, 0)); }
+.tm-task-item[data-swipe]::before {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--size-4-4);
+  border-radius: inherit;
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  opacity: .55;
+  pointer-events: none;
+}
+.tm-task-item[data-swipe="select"]::before { content: "Select"; justify-content: flex-start; background: var(--color-blue); }
+.tm-task-item[data-swipe="deselect"]::before { content: "Deselect"; justify-content: flex-start; background: var(--color-base-50, var(--text-faint)); }
+.tm-task-item[data-swipe="actions"]::before { content: "Actions"; justify-content: flex-end; background: var(--interactive-accent); }
+.tm-task-item.is-swipe-armed::before { opacity: 1; }
+
+/* Repeats and completion dates */
+.tm-task-repeat { display: inline-flex; align-items: center; gap: 4px; color: var(--color-base-60); cursor: pointer; white-space: nowrap; }
+.tm-task-repeat:hover { color: var(--text-normal); }
+.tm-task-done { color: var(--text-faint); white-space: nowrap; }
+.tm-main-view .tm-task-item :is(.tm-task-repeat, .tm-task-done), .tm-main-view .tm-task-item .tm-task-repeat > span { font-size: inherit; }
+
+/* Tasks plugin import */
+.tm-import-modal .tm-import-scope { border: 0; padding: 0; margin: 0 0 var(--size-4-3); display: grid; gap: var(--size-2-2); }
+.tm-import-modal .tm-import-scope legend { font-weight: var(--font-semibold); margin-bottom: var(--size-2-2); }
+.tm-import-modal .tm-import-option { display: block; margin-bottom: var(--size-4-3); }
+.tm-import-modal .tm-import-option input[type=text] { margin-inline-start: var(--size-2-2); }
+.tm-import-summary { margin: var(--size-4-3) 0; padding: var(--size-4-2) var(--size-4-3); border-radius: var(--radius-m); background: var(--background-secondary); }
+.tm-import-examples { margin: var(--size-4-2) 0; padding-inline-start: var(--size-4-4); font-size: var(--font-ui-small); }
+.tm-import-examples li { margin-bottom: var(--size-2-3); overflow-wrap: anywhere; }
+.tm-import-skip { margin: var(--size-2-2) 0 0; color: var(--text-muted); font-size: var(--font-ui-small); }
+
+/* Task query blocks in notes. They share the task views' styles (rows in either style, boards, the calendar) through
+   .tm-main-view, but grow with their tasks inside the note instead of filling and scrolling a pane. */
+.tm-query-block { margin: var(--size-4-2) 0; padding: var(--size-4-2) var(--size-4-3); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); }
+.tm-query-block.tm-main-view { height: auto; overflow: visible; font-family: var(--font-interface); }
+/* The note's own heading styles stay out of the board's columns and the calendar's month. */
+.tm-query-block.tm-main-view h2 { margin: 0; color: var(--text-normal); font-size: var(--font-ui-medium); font-weight: var(--font-semibold); line-height: 1.3; }
+.tm-query-title { display: flex; align-items: center; gap: var(--size-4-2); margin-bottom: var(--size-4-1); font-weight: var(--font-semibold); }
+.tm-query-group { margin: var(--size-4-2) 0 var(--size-2-2); color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: .04em; }
+.tm-query-block .tm-task-list { margin: 0; }
+/* A board's columns are narrower than a task view's, so a few fit across a note; more scroll sideways. */
+.tm-query-block .tm-kanban { gap: var(--size-4-3); min-height: 0; padding: var(--size-4-2) 0 var(--size-4-1); }
+.tm-query-block .tm-kanban-column { flex: 1 0 220px; min-width: 220px; padding: 0; }
+/* A calendar's hours scroll within a note-sized frame. */
+.tm-query-block.is-calendar-view .tm-calendar { height: auto; }
+.tm-query-block.is-calendar-view .tm-calendar-day-scroll { flex: none; max-height: min(60vh, 540px); }
+.tm-query-block .tm-calendar .tm-calendar-week:not(.is-four-day) { min-width: 560px; }
+.tm-query-block .tm-calendar-toolbar { margin-bottom: var(--size-4-3); }
+.tm-query-empty, .tm-query-footer { color: var(--text-muted); font-size: var(--font-ui-small); }
+.tm-query-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--size-4-2); margin-top: var(--size-4-2); }
+.tm-query-error { color: var(--text-normal); font-size: var(--font-ui-small); }
+.tm-query-error strong { color: var(--text-error); }
+.tm-query-error ul { margin: var(--size-2-2) 0; padding-inline-start: var(--size-4-4); }
+.tm-query-help { color: var(--text-muted); }
+
+/* View options panel: a popover of sort, group and filter rows under the header's filter button. */
+.tm-view-header { position: relative; }
+.tm-filter-toggle { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.tm-filter-toggle.is-active { background: var(--background-modifier-hover); color: var(--text-normal); }
+.tm-options-toggle-icon { display: inline-flex; }
+.tm-options-badge {
+  position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--interactive-accent); color: var(--text-on-accent);
+  font-size: 10px; font-weight: var(--font-semibold); line-height: 16px; text-align: center;
+  transform: translate(30%, -30%); pointer-events: none;
+}
+.tm-options-badge[hidden] { display: none; }
+.tm-options-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: var(--layer-popover, 30);
+  display: flex; flex-direction: column; width: 380px; max-width: calc(100vw - 24px); max-height: min(70vh, 640px);
+  border: 1px solid var(--background-modifier-border); border-radius: 14px;
+  background: var(--background-secondary); box-shadow: var(--shadow-l); overflow: hidden;
+}
+.tm-options-panel[hidden] { display: none; }
+/* A task view's opens under its button in the tab's header (placed there as it opens). */
+.tm-options-panel.is-under-toggle { position: fixed; top: var(--tm-options-top, 80px); right: var(--tm-options-right, 8px); }
+/* Layout: List, Calendar, Kanban (or Gantt), one pressed. */
+.tm-options-layouts {
+  display: flex; gap: 2px; height: var(--input-height, 30px); box-sizing: border-box; padding: 2px;
+  border-radius: 999px; background: var(--background-modifier-hover);
+}
+.tm-options-layouts button {
+  display: flex; flex: 1 1 0; align-items: center; justify-content: center; gap: 6px; height: 100%; min-height: 0; padding: 0 10px;
+  border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-small);
+}
+.tm-options-layouts button .tm-options-icon { display: inline-flex; color: inherit; }
+.tm-options-layouts button svg { width: 14px; height: 14px; }
+.tm-options-layouts button:hover { color: var(--text-normal); }
+.tm-options-layouts button[aria-pressed="true"] { background: var(--background-primary); color: var(--text-normal); box-shadow: var(--shadow-s); }
+.tm-options-layouts button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
+.tm-options-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--background-modifier-border); }
+.tm-options-header h2 { margin: 0; font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
+button.tm-options-clear { padding: 4px 8px; border: 0; background: transparent; box-shadow: none; color: var(--text-accent); font-size: var(--font-ui-small); cursor: pointer; }
+button.tm-options-clear:disabled { color: var(--text-faint); cursor: default; }
+.tm-options-body { position: relative; overflow-y: auto; padding-bottom: 6px; }
+.tm-options-section { padding: 12px 18px; border-bottom: 1px solid var(--background-modifier-border); }
+.tm-options-section:last-child { border-bottom: 0; }
+.tm-options-section h3 { margin: 0 0 6px; color: var(--text-muted); font-size: var(--font-ui-small); font-weight: var(--font-normal); }
+.tm-options-row { display: flex; align-items: center; gap: 10px; min-height: 42px; }
+.tm-options-label { display: flex; flex: 1 1 auto; align-items: center; gap: 10px; min-width: 0; color: var(--text-normal); font-size: var(--font-ui-medium); }
+.tm-options-label > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-options-icon, .tm-options-chevron, .tm-options-check { display: inline-flex; flex: none; }
+.tm-options-icon { color: var(--text-muted); }
+.tm-options-icon svg { width: 18px; height: 18px; }
+button.tm-options-select {
+  display: flex; flex: 0 0 170px; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; height: 34px;
+  padding: 0 10px 0 12px; border: 1px solid var(--background-modifier-border); border-radius: 8px;
+  background: var(--background-primary); box-shadow: none; color: var(--text-normal); font-size: var(--font-ui-small); cursor: pointer;
+}
+button.tm-options-select:hover { border-color: var(--background-modifier-border-hover); background: var(--background-primary); }
+button.tm-options-select.is-open, button.tm-options-select:focus-visible {
+  border-color: var(--interactive-accent); outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 25%, transparent);
+}
+.tm-options-select.is-placeholder .tm-options-select-text { color: var(--text-faint); }
+.tm-options-select-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-options-chevron { color: var(--text-muted); }
+.tm-options-chevron svg, .tm-options-check svg { width: 16px; height: 16px; }
+.tm-options-row.has-direction button.tm-options-select { flex-basis: 128px; }
+button.tm-options-direction { flex: none; width: 34px; height: 34px; }
+.tm-options-switch { flex: none; }
+.tm-options-dropdown {
+  position: absolute; z-index: 2; max-height: 360px; overflow-y: auto; padding: 6px;
+  border: 1px solid var(--background-modifier-border); border-radius: 12px; background: var(--background-primary); box-shadow: var(--shadow-l);
+}
+.tm-options-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; padding: 6px 10px;
+  border-radius: 6px; color: var(--text-normal); font-size: var(--font-ui-small); cursor: pointer; outline: none;
+}
+.tm-options-option:hover, .tm-options-option:focus { background: var(--background-modifier-hover); }
+.tm-options-option:focus-visible { box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+.tm-options-option[aria-selected="true"] { font-weight: var(--font-semibold); }
+.tm-options-option.is-action { color: var(--text-muted); }
+.tm-options-separator { height: 1px; margin: 4px 6px; background: var(--background-modifier-border); }
+.tm-options-input { width: 100%; margin-bottom: 6px; font-size: var(--font-ui-small); }
+.tm-options-conditions { margin: 2px 0 8px; padding: 10px 12px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); }
+.tm-options-conditions-header { display: flex; align-items: center; justify-content: space-between; font-size: var(--font-ui-small); font-weight: var(--font-semibold); }
+.tm-options-conditions .tm-filter-hint { margin: 2px 0 4px; }
+.tm-options-conditions .tm-filter-clause { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.tm-options-conditions .tm-filter-values { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tm-options-conditions .tm-filter-values label { display: flex; align-items: center; gap: 6px; font-size: var(--font-ui-small); }
+.tm-options-conditions :is(select, input:not([type="checkbox"])) { max-width: 100%; font-size: var(--font-ui-small); }
+@media (pointer: coarse) {
+  .tm-options-row { min-height: 48px; }
+  button.tm-options-select, button.tm-options-direction { height: 40px; }
+  .tm-options-option { min-height: 44px; }
+}
+@media (max-width: 480px) {
+  .tm-options-panel { position: fixed; top: auto; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); left: 8px; width: auto; max-height: 80vh; }
+}
+/* On phones popovers and menus open at the top of the screen, below any notch, wherever they were opened from. */
+.tm-popover-top { top: calc(var(--tm-popover-top, 8px) + env(safe-area-inset-top, 0px)); }
+/* On phones it opens at the top of the screen, as every popover does there. */
+body.is-phone .tm-options-panel { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 8px; bottom: auto; left: 8px; width: auto; max-height: 80vh; }
+@media (prefers-reduced-motion: no-preference) {
+  .tm-options-panel:not([hidden]) { animation: tm-options-in 120ms ease-out; }
+}
+@keyframes tm-options-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* ── Things style ──────────────────────────────────────────────────────────
+   Single-line rows: a star or date box, the title with its notes, repeat and tag marks,
+   and the deadline at the end of the line; the note a task lives in sits quietly below.
+   Headings are accent-coloured with a rule, and a selection reads as one rounded block. */
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) {
+  grid-template-columns: 16px minmax(0, 1fr);
+  /* The title lines up with the checkbox, including a narrow window's taller touch target around it. */
+  align-items: center;
+  gap: 0 10px;
+  min-height: 0;
+  padding: 5px 8px 5px calc(8px + var(--tm-depth) * 24px);
+  border-radius: 0;
+}
+.tm-main-view.tm-style-things.tm-density-compact .tm-task-row.tm-task-item:not(.tm-project-row) { padding-top: 3px; padding-bottom: 3px; }
+/* The checkbox sits in the middle of the whole row, however many lines the title and project take. */
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { align-self: center; padding-top: 0; }
+/* Rows keep their desktop spacing in narrow windows and on touch screens: the checkbox's taller touch target from
+   those layouts would otherwise make every row 32–44px or more. */
+@media (max-width: 700px), (pointer: coarse) {
+  .tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-checkbox-target { width: auto; height: auto; min-height: 0; }
+}
+.tm-main-view.tm-style-things input.tm-task-checkbox {
+  --checkbox-size: 14px;
+  --checkbox-radius: 3px;
+  width: 14px;
+  height: 14px;
+  border-width: 1px;
+}
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-content { gap: 1px; }
+/* One line: tags give way first, then the title; everything else keeps its size. */
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary { flex-wrap: nowrap; align-items: center; gap: 6px; }
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary > * { flex-shrink: 0; }
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary > button.tm-task-title { flex: 0 1 auto; min-width: 0; font-weight: var(--font-medium); }
+/* Short of room, the tags shrink first (to a few letters each, with an ellipsis), and only then the title, so a
+   long list of tags never squeezes the title away and a short title keeps no empty space after it. */
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary > .tm-things-tag.is-long {
+  display: block; flex: 0 1000 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis;
+}
+
+.tm-things-lead { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; }
+/* Dates and times read as plain text after a calendar (or clock) icon, like the deadline. */
+.tm-things-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tm-things-date.tm-things-done { cursor: default; }
+/* A project's range: each end is its own button. */
+.tm-things-date.tm-things-range { cursor: default; }
+.tm-things-range [role="button"] { cursor: pointer; }
+.tm-things-date.tm-things-when.is-overdue { color: var(--text-error); }
+.tm-things-today { display: inline-flex; align-items: center; color: var(--color-yellow); cursor: pointer; }
+.tm-things-today svg { width: 13px; height: 13px; fill: currentColor; }
+/* A recurring task's checkbox is its repeat icon: the checkbox covers it, unseen, so clicks, keys and screen readers
+   still reach it; the icon takes the priority's colour, and fades once the task is done. */
+.tm-repeat-target { position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.tm-repeat-target > input.tm-task-checkbox { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.tm-repeat-icon { display: inline-flex; color: var(--text-muted); pointer-events: none; }
+.tm-repeat-icon svg { width: 15px; height: 15px; }
+.tm-repeat-target.is-p1 .tm-repeat-icon { color: var(--text-error); }
+.tm-repeat-target.is-p2 .tm-repeat-icon { color: var(--color-orange); }
+.tm-repeat-target.is-p3 .tm-repeat-icon { color: var(--color-blue); }
+.tm-repeat-target:hover .tm-repeat-icon { color: var(--text-normal); }
+.tm-repeat-target > input:checked + .tm-repeat-icon { color: var(--text-faint); }
+.tm-repeat-target > input:focus-visible + .tm-repeat-icon { border-radius: 3px; box-shadow: 0 0 0 2px var(--background-modifier-border-focus); }
+.tm-things-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid var(--text-faint);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Dates, times and the deadline sit together at the end of the line. */
+/* On phones, and in narrow windows, list rows leave tags out for room; an open card (and its checklist) still shows
+   them. 700px is where the rest of the layout switches to its narrow form too. */
+body.is-phone .tm-main-view.tm-style-things .tm-task-row .tm-things-tag,
+body.is-phone .tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary > .tm-things-tag.is-long { display: none; }
+@media (max-width: 700px) {
+  .tm-main-view.tm-style-things .tm-task-row .tm-things-tag,
+  .tm-main-view.tm-style-things .tm-task-row.tm-task-item:not(.tm-project-row) .tm-task-primary > .tm-things-tag.is-long { display: none; }
+}
+.tm-things-trailing { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; margin-inline-start: auto; padding-inline-start: 12px; }
+/* On phones they sit below the title, before the note the task lives in. */
+.tm-things-secondary > .tm-things-trailing { margin-inline-start: 0; padding-inline-start: 0; }
+.tm-things-checklist { display: inline-flex; align-items: center; color: var(--text-faint); }
+.tm-things-checklist svg { width: 12px; height: 12px; }
+.tm-things-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tm-things-deadline.is-urgent { color: var(--text-error); }
+.tm-things-deadline .tm-task-detail-icon svg { fill: currentColor; }
+.tm-things-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.tm-things-source { overflow: hidden; color: var(--text-muted); font-size: var(--font-ui-smaller); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+:is(.tm-things-date, .tm-things-tag, .tm-things-source):not(.tm-things-done, .is-overdue, .tm-things-range):hover,
+.tm-things-range [role="button"]:hover,
+.tm-things-deadline:not(.is-urgent):hover { color: var(--text-normal); }
+.tm-task-row.is-completed :is(.tm-things-lead, .tm-things-tag, .tm-things-deadline, .tm-things-secondary) { opacity: 0.7; }
+
+/* Headings: accent text over a thin rule. */
+.tm-main-view.tm-style-things .tm-section { margin-bottom: var(--size-4-6); }
+.tm-main-view.tm-style-things .tm-task-list:not(.tm-drop-only) + .tm-section { margin-top: var(--size-4-6); }
+.tm-main-view.tm-style-things .tm-section h2 {
+  margin-bottom: 4px;
+  padding: 0 8px 5px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-accent);
+  font-weight: var(--font-bold);
+}
+.tm-main-view.tm-style-things .tm-section.is-alert h2 { color: var(--text-error); }
+.tm-main-view.tm-style-things .tm-section h2 .tm-section-count { background: none; padding: 0; color: var(--text-faint); }
+.tm-main-view.tm-style-things .tm-kanban-column-header { padding: 0 8px 5px; border-bottom: 1px solid var(--background-modifier-border); }
+.tm-main-view.tm-style-things .tm-kanban-column-header h2 { color: var(--text-accent); font-weight: var(--font-bold); }
+.tm-main-view.tm-style-things .tm-kanban-column.is-alert .tm-kanban-column-header h2 { color: var(--text-error); }
+
+/* Selection: a rounded block in the text selection colour; consecutive selected rows join into one. */
+.tm-main-view.tm-style-things .tm-task-row.tm-task-item.is-selected {
+  background: var(--text-selection);
+  border-radius: 6px;
+}
+/* In either style, consecutive selected rows join into one block; a board's cards stay apart. */
+.tm-main-view .tm-task-row.tm-task-item.is-selected.is-selection-continues:not(.tm-kanban *) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.tm-main-view .tm-task-row.is-selected + .tm-task-row.tm-task-item.is-selected:not(.tm-kanban *) { border-top-left-radius: 0; border-top-right-radius: 0; }
+
+/* Things style: a task opened in place as a card. */
+.tm-things-card {
+  position: relative;
+  margin: 10px 0 10px calc(var(--tm-depth, 0) * 24px);
+  padding: 12px 14px 10px 8px;
+  border-radius: 10px;
+  /* The main area's own background, set off by its shadow and a faint outline. */
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l), inset 0 0 0 1px color-mix(in srgb, var(--text-normal) 5%, transparent);
+  font-family: var(--font-interface);
+}
+.tm-things-card-head { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 0 10px; align-items: start; padding-left: 0; }
+.tm-things-card-head .tm-task-checkbox { --checkbox-size: 14px; --checkbox-radius: 3px; width: 14px; height: 14px; margin: 3px 0 0; border-width: 1px; }
+.tm-main-view textarea.tm-things-card-title,
+.tm-main-view textarea.tm-things-card-notes {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-family: inherit;
+}
+.tm-main-view textarea.tm-things-card-title { display: block; min-height: 0; overflow: hidden; resize: none; font-size: var(--font-ui-medium); font-weight: var(--font-medium); line-height: 1.4; }
+/* The title's highlight layer sits behind the text area and matches its text exactly; the text area shows only its caret. */
+.tm-things-card-title-box { position: relative; min-width: 0; }
+.tm-things-card-title-backdrop {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  color: var(--text-normal); font-family: inherit; font-size: var(--font-ui-medium); font-weight: var(--font-medium); line-height: 1.4;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;
+}
+.tm-main-view textarea.tm-things-card-title { position: relative; color: transparent; caret-color: var(--text-normal); }
+.tm-main-view textarea.tm-things-card-title::selection { color: var(--text-normal); }
+
+/* The task editor's property buttons, below its text: each shows the value the text sets, or its name. */
+.tm-editor-properties { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+button.tm-editor-property {
+  display: inline-flex; align-items: center; gap: 5px; height: auto; min-height: 26px; padding: 3px 9px;
+  border: 1px solid var(--background-modifier-border); border-radius: 999px; box-shadow: none; background: transparent;
+  color: var(--text-muted); font-size: var(--font-ui-smaller); font-weight: var(--font-medium); cursor: pointer;
+}
+button.tm-editor-property:hover, button.tm-editor-property:focus-visible { background: var(--background-modifier-hover); color: var(--text-normal); }
+button.tm-editor-property.is-set { border-color: transparent; background: var(--background-modifier-hover); color: var(--text-normal); }
+.tm-editor-property-icon { display: inline-flex; }
+.tm-editor-property-icon svg { width: 13px; height: 13px; }
+.tm-editor-property-label { max-width: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.tm-editor-property.is-p1 .tm-editor-property-icon { color: var(--text-error); }
+button.tm-editor-property.is-p2 .tm-editor-property-icon { color: var(--color-orange); }
+button.tm-editor-property.is-p3 .tm-editor-property-icon { color: var(--color-blue); }
+@media (pointer: coarse) { button.tm-editor-property { min-height: 36px; } }
+
+/* What typed text sets, highlighted in its property's colour like a marker: dates, times and durations blue, the
+   deadline red, a priority its own colour, tags grey, the project green, anything else the accent. */
+.tm-nlp-token {
+  --tm-nlp-color: var(--interactive-accent);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--tm-nlp-color) 22%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tm-nlp-color) 22%, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.tm-nlp-token.is-date { --tm-nlp-color: var(--color-blue); }
+.tm-nlp-token.is-deadline, .tm-nlp-token.is-p1 { --tm-nlp-color: var(--color-red); }
+.tm-nlp-token.is-p2 { --tm-nlp-color: var(--color-orange); }
+.tm-nlp-token.is-p3 { --tm-nlp-color: var(--color-blue); }
+.tm-nlp-token.is-tag { --tm-nlp-color: var(--text-muted); }
+.tm-nlp-token.is-project { --tm-nlp-color: var(--color-green); }
+/* A recurring task's log: completed instances green, cancelled ones red. */
+.tm-nlp-token.is-log-completed { --tm-nlp-color: var(--color-green); }
+.tm-nlp-token.is-log-canceled { --tm-nlp-color: var(--color-red); }
+.tm-main-view textarea.tm-things-card-notes {
+  display: block;
+  min-height: 0;
+  margin: 8px 0 0 26px;
+  width: calc(100% - 26px);
+  overflow: hidden;
+  resize: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+}
+.tm-main-view :is(textarea.tm-things-card-title, textarea.tm-things-card-notes):focus { box-shadow: none; border: 0; }
+.tm-things-card-title::placeholder, .tm-things-card-notes::placeholder { color: var(--text-faint); }
+
+.tm-things-card-checklist { margin: 14px 0 0 26px; border-top: 1px solid var(--background-modifier-border); }
+.tm-things-card-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+.tm-things-card-check.is-completed .tm-things-card-check-title { color: var(--text-faint); text-decoration: line-through; }
+.tm-things-card-checklist:empty { display: none; }
+/* Subtask names are plain text you can click into; they size to their text so properties follow them. */
+.tm-main-view input.tm-things-card-check-title {
+  flex: 0 1 auto;
+  min-width: 4ch;
+  max-width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  field-sizing: content;
+}
+.tm-main-view input.tm-things-card-check-title:focus { border: 0; box-shadow: none; }
+.tm-things-card-check.is-new { cursor: text; }
+.tm-things-card-check.is-new .tm-things-card-check-title { flex: 1 1 auto; }
+.tm-things-card-check.is-new .tm-things-card-check-box { opacity: 0.6; }
+.tm-things-card-check > :not(.tm-things-card-check-title) { flex-shrink: 0; }
+.tm-main-view input.tm-things-card-check-box {
+  --checkbox-radius: 50%;
+  --checkbox-size: 12px;
+  position: relative;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  border: 1.5px solid var(--interactive-accent);
+  border-radius: 50%;
+}
+/* A done subtask: just a check, no circle, in the done subtask's own faint colour; drawn here so every theme shows it. */
+.tm-main-view input.tm-things-card-check-box:checked {
+  border-color: transparent;
+  background-color: transparent;
+}
+.tm-main-view input.tm-things-card-check-box:checked::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  width: auto;
+  height: auto;
+  background-color: var(--text-faint);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2 6.4l2.7 2.7L10 3.4' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100%;
+}
+
+.tm-things-card-properties { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; margin: 14px 0 2px 26px; }
+.tm-things-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-things-card-tag {
+  padding: 1px 9px;
+  border-radius: 999px;
+  /* The theme's tag colours, as tags show in notes. */
+  border: var(--tag-border-width) solid var(--tag-border-color);
+  background: var(--tag-background);
+  color: var(--tag-color);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+.tm-things-card-tag:not(.tm-things-add-tag):hover { border-color: var(--tag-border-color-hover); background: var(--tag-background-hover); color: var(--tag-color-hover); }
+.tm-things-card-property { display: inline-flex; align-items: center; gap: 7px; font-size: var(--font-ui-small); cursor: pointer; }
+.tm-things-card-label { color: var(--text-normal); font-weight: var(--font-semibold); }
+.tm-things-card-extra { color: var(--text-muted); }
+.tm-things-card-icon { display: inline-flex; color: var(--text-normal); }
+.tm-things-card-icon svg { width: 14px; height: 14px; }
+.tm-things-card-property.is-today .tm-things-card-icon { color: var(--color-yellow); }
+.tm-things-card-property.is-today .tm-things-card-icon svg,
+.tm-things-card-property .tm-things-card-icon svg.lucide-flag { fill: currentColor; }
+.tm-things-card-property.is-dated .tm-things-card-icon { color: var(--color-red); }
+.tm-things-card-property.is-urgent :is(.tm-things-card-label, .tm-things-card-icon) { color: var(--text-error); }
+/* The priority line's icon takes the checkbox's priority colour. */
+.tm-things-card-property.is-p1 .tm-things-card-icon { color: var(--text-error); }
+.tm-things-card-property.is-p2 .tm-things-card-icon { color: var(--color-orange); }
+.tm-things-card-property.is-p3 .tm-things-card-icon { color: var(--color-blue); }
+.tm-things-card-property:hover .tm-things-card-label { text-decoration: underline; text-decoration-color: var(--text-faint); }
+/* A project's dates: the start and end each open their own editor, so each underlines on its own. */
+.tm-things-project-dates { cursor: default; }
+.tm-things-card-property.tm-things-project-dates:hover .tm-things-card-label { text-decoration: none; }
+.tm-things-project-dates [role="button"] { cursor: pointer; }
+.tm-things-project-dates [role="button"]:hover { text-decoration: underline; text-decoration-color: var(--text-faint); }
+.tm-things-card-toolbar { display: flex; justify-content: flex-end; gap: 2px; min-width: 0; margin-top: 4px; }
+/* The property buttons keep their size; the project button gives way, its name ending in an ellipsis. */
+.tm-things-card-toolbar > .clickable-icon { flex: none; }
+.tm-things-card-toolbar .clickable-icon { color: var(--text-faint); }
+.tm-things-card-toolbar .clickable-icon:hover { color: var(--text-normal); }
+
+/* Things style: project rows in the Projects list read like Things' project rows. */
+.tm-main-view.tm-style-things .tm-task-row.tm-things-project-row {
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 0 10px;
+  align-items: start;
+  min-height: 0;
+  padding: 5px 8px 5px calc(8px + var(--tm-depth) * 24px);
+}
+.tm-main-view.tm-style-things.tm-density-compact .tm-task-row.tm-things-project-row { padding-top: 3px; padding-bottom: 3px; }
+/* Like a task's checkbox, the icon sits in the middle of the whole row, even when a parent line shows below. */
+.tm-main-view.tm-style-things .tm-things-project-row > .tm-project-icon { align-self: center; justify-self: center; height: 1.4em; font-size: var(--font-ui-medium); }
+.tm-main-view.tm-style-things .tm-things-project-row .tm-task-content { display: flex; flex-direction: column; gap: 1px; padding: 0; min-width: 0; font-family: var(--font-interface); }
+.tm-main-view.tm-style-things .tm-things-project-row .tm-task-primary { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; min-width: 0; }
+.tm-main-view.tm-style-things .tm-things-project-row .tm-task-primary > * { flex-shrink: 0; }
+.tm-main-view.tm-style-things .tm-things-project-row .tm-task-primary > button.tm-task-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-things-count {
+  padding: 0 4px;
+  border: 1px solid var(--text-faint);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  line-height: 1.35;
+}
+
+/* Things style: board cards read like an open task card rather than a squeezed one-line row. */
+.tm-main-view.tm-style-things .tm-kanban .tm-task-row.tm-things-board-card {
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 0 10px;
+  align-items: start;
+  min-height: 0;
+  padding: 12px 14px 10px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s), inset 0 0 0 1px color-mix(in srgb, var(--text-normal) 5%, transparent);
+}
+.tm-main-view.tm-style-things .tm-kanban .tm-task-row.tm-things-board-card.has-project-color {
+  box-shadow: inset 3px 0 0 var(--tm-project-color), var(--shadow-s);
+}
+/* The selection colour is laid over the card, which keeps its own background beneath. */
+.tm-main-view.tm-style-things .tm-kanban .tm-task-row.tm-things-board-card.is-selected {
+  border-radius: 10px;
+  background: linear-gradient(var(--text-selection), var(--text-selection)), var(--background-primary);
+}
+.tm-main-view.tm-style-things .tm-kanban .tm-task-row.tm-task-item.tm-things-board-card .tm-checkbox-target { align-self: start; padding-top: 3px; }
+.tm-main-view.tm-style-things .tm-kanban .tm-things-board-card .tm-task-content { display: flex; flex-direction: column; gap: 8px; padding: 0; }
+.tm-main-view.tm-style-things .tm-kanban .tm-things-board-card .tm-task-primary { flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.tm-main-view.tm-style-things .tm-kanban .tm-things-board-card .tm-task-primary > button.tm-task-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: visible;
+  font-weight: var(--font-medium);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+.tm-things-board-notes {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+.tm-kanban .tm-things-board-card .tm-things-card-properties { gap: 5px; margin: 0; }
+.tm-kanban .tm-things-board-card .tm-things-secondary { gap: 6px; }
+/* Board cards keep property lines short: no "since …", "N days ago/left" or priority code beside the labels.
+   The icon stays beside the label's first line when a long label wraps. */
+.tm-kanban .tm-things-board-card .tm-things-card-property { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 7px; align-items: start; }
+.tm-kanban .tm-things-board-card .tm-things-card-icon { margin-top: 2px; }
+.tm-kanban .tm-things-board-card .tm-things-card-extra { display: none; }
+
+/* Folding: a chevron in the left gutter folds a task's subtasks or a group's tasks away.
+   It shows on hover, and stays visible while folded so hidden rows are never a surprise. */
+.tm-task-row, .tm-section h2 { position: relative; }
+button.tm-fold-toggle {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  color: var(--text-faint);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease;
+}
+button.tm-fold-toggle svg { width: 14px; height: 14px; transition: transform 150ms ease; }
+button.tm-fold-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+button.tm-fold-toggle:hover { color: var(--text-normal); }
+.tm-task-row:hover > button.tm-row-fold, .tm-task-row.is-folded > button.tm-row-fold,
+.tm-section h2:hover > button.tm-group-fold, .tm-section.is-folded > h2 > button.tm-group-fold,
+button.tm-fold-toggle:focus-visible { opacity: 1; }
+/* Rows: just left of the checkbox at the row's depth. */
+.tm-main-view button.tm-row-fold { left: calc(var(--tm-depth, 0) * 24px - 20px); }
+.tm-main-view.tm-style-things button.tm-row-fold { left: calc(var(--tm-depth, 0) * 24px - 12px); }
+/* Narrow windows indent rows 12px a level, up to 36px (see .tm-task-row there): the fold button keeps clear of the checkbox. */
+@media (max-width: 700px) {
+  .tm-main-view:not(.tm-style-things) button.tm-row-fold { left: calc(min(calc(var(--tm-depth, 0) * 12px), 36px) - 20px); }
+}
+/* Without hover, a fold button shows where there is something to fold. */
+@media (hover: none) { button.tm-fold-toggle { opacity: 1; } }
+/* Groups: just left of the heading text. */
+.tm-main-view button.tm-group-fold { left: -22px; }
+.tm-main-view.tm-style-things button.tm-group-fold { left: -14px; }
+.tm-section.is-folded { margin-bottom: var(--size-4-4); }
+/* A click anywhere on a group's heading folds it as well. */
+.tm-section h2.tm-foldable-heading { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { button.tm-fold-toggle, button.tm-fold-toggle svg { transition: none; } }
+
+/* Date popover: natural-language input, quick picks, a month calendar, and time/duration rows. */
+.tm-date-popover {
+  position: fixed;
+  /* Above modals too: the task editor opens these beside its property buttons. */
+  z-index: var(--layer-menu, 65);
+  box-sizing: border-box;
+  width: 264px;
+  padding: 4px 0 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
+}
+.tm-date-popover-row { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; padding: 7px 14px; }
+.tm-date-popover-icon { display: inline-flex; flex: 0 0 auto; color: var(--text-muted); }
+.tm-date-popover-icon svg { width: 17px; height: 17px; }
+.tm-date-popover input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font: inherit;
+}
+.tm-date-popover input[type="text"]:focus { border: 0; box-shadow: none; }
+.tm-date-popover input[type="text"]::placeholder { color: var(--text-faint); }
+.tm-date-popover input[type="text"].is-invalid { color: var(--text-error); }
+.tm-date-popover-hint { padding: 0 14px 0 43px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.tm-date-popover-hint:empty { display: none; }
+.tm-date-popover-hint.is-invalid { color: var(--text-error); }
+.tm-date-popover-divider { height: 1px; margin: 4px 0; background: var(--background-modifier-border); }
+button.tm-date-popover-choice {
+  justify-content: flex-start;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.tm-date-popover-choice:hover, button.tm-date-popover-choice:focus-visible { background: var(--background-modifier-hover); }
+.tm-date-popover-calendar { padding: 6px 10px 4px; }
+.tm-date-popover-month { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 6px; }
+.tm-date-popover-month-label { font-weight: var(--font-bold); }
+.tm-date-popover-nav { display: flex; gap: 2px; }
+.tm-date-popover-nav .clickable-icon { padding: 3px; color: var(--text-muted); }
+.tm-date-popover-nav .clickable-icon svg { width: 15px; height: 15px; }
+.tm-date-popover-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.tm-date-popover-weekday { padding: 4px 0; color: var(--text-muted); font-size: var(--font-ui-smaller); text-align: center; }
+button.tm-date-popover-day {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font: inherit;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+button.tm-date-popover-day:hover { background: var(--background-modifier-hover); }
+button.tm-date-popover-day.is-outside { color: var(--text-faint); }
+button.tm-date-popover-day.is-today { color: var(--text-accent); font-weight: var(--font-bold); }
+button.tm-date-popover-day.is-selected { background: color-mix(in srgb, var(--interactive-accent) 30%, transparent); color: var(--text-accent); }
+
+/* Card: a "+" pill after the tags (no fill, dashed border) that turns into a small tag input. */
+.tm-things-card-tag.tm-things-add-tag {
+  display: inline-flex;
+  align-items: center;
+  height: auto;
+  padding: 1px 7px;
+  border: 1px dashed var(--text-faint);
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+.tm-things-card-tag.tm-things-add-tag:hover { border-color: var(--text-muted); color: var(--text-normal); }
+.tm-things-card-tag.tm-things-add-tag svg { width: 12px; height: 12px; }
+.tm-things-card-tag.tm-things-add-tag.is-editing { cursor: text; border-color: var(--interactive-accent); }
+.tm-main-view .tm-things-add-tag input[type="text"] {
+  min-width: 5ch;
+  height: auto;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font: inherit;
+  font-weight: var(--font-semibold);
+  field-sizing: content;
+}
+.tm-main-view .tm-things-add-tag input[type="text"]:focus { border: 0; box-shadow: none; }
+.tm-main-view button.tm-things-add-tag-menu {
+  display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 2px; padding: 0;
+  border: 0; border-radius: 4px; box-shadow: none; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.tm-main-view button.tm-things-add-tag-menu:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+
+/* Card tags: hovering shows a small cross, top right, that takes the tag off the task. */
+.tm-things-card-tag { position: relative; }
+button.tm-things-tag-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 50%;
+  box-shadow: none;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  cursor: pointer;
+}
+button.tm-things-tag-remove svg { width: 10px; height: 10px; }
+.tm-things-card-tag:hover > button.tm-things-tag-remove { opacity: 1; }
+button.tm-things-tag-remove:hover { color: var(--text-error); border-color: var(--text-error); }
+@media (prefers-reduced-motion: reduce) { button.tm-things-tag-remove { transition: none; } }
+
+/* Choice popover (priority): the view options dropdown, opened beside a property. */
+.tm-options-dropdown.tm-choice-popover { position: fixed; z-index: var(--layer-menu, 65); min-width: 180px; }
+.tm-choice-label { display: inline-flex; align-items: center; gap: 8px; }
+.tm-choice-icon { display: inline-flex; color: var(--text-muted); }
+.tm-choice-icon svg { width: 15px; height: 15px; }
+.tm-choice-detail { color: var(--text-muted); font-weight: var(--font-normal); }
+/* Options a search leaves out; the options' own display would otherwise override the hidden attribute. */
+.tm-choice-popover :is(.tm-options-option, .tm-options-separator)[hidden] { display: none; }
+.tm-choice-popover .tm-choice-create { color: var(--text-accent); }
+.tm-choice-popover .tm-choice-create .tm-choice-icon { color: var(--text-accent); }
+.tm-choice-hint { margin: -2px 4px 6px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.tm-choice-hint:empty { display: none; }
+.tm-choice-hint.is-invalid { color: var(--text-error); }
+.tm-choice-popover .is-p1 .tm-choice-icon { color: var(--text-error); }
+.tm-choice-popover .is-p2 .tm-choice-icon { color: var(--color-orange); }
+.tm-choice-popover .is-p3 .tm-choice-icon { color: var(--color-blue); }
+/* The Task Details sidebar's view picker: each list, project and tag with the icon and colour the task sidebar gives it. */
+.tm-choice-popover .tm-choice-color-blue .tm-choice-icon { color: var(--color-blue); }
+.tm-choice-popover .tm-choice-color-yellow .tm-choice-icon { color: var(--color-yellow); }
+.tm-choice-popover .tm-choice-color-red .tm-choice-icon { color: var(--color-red); }
+.tm-choice-popover .tm-choice-color-cyan .tm-choice-icon { color: var(--color-cyan); }
+.tm-choice-popover .tm-choice-color-orange .tm-choice-icon { color: var(--color-orange); }
+.tm-choice-popover .tm-choice-color-muted .tm-choice-icon { color: var(--text-faint); }
+.tm-choice-popover .is-filled .tm-choice-icon svg { fill: currentColor; }
+.tm-choice-popover .is-project .tm-choice-icon { width: 15px; justify-content: center; }
+.tm-choice-popover .is-project .tm-project-progress { min-height: 0; font-size: 14px; }
+
+/* Task menu: right-click on a task. Rows of date and priority icons, then rows that open a popover beside it. */
+.tm-task-menu {
+  position: fixed;
+  z-index: var(--layer-menu, 65);
+  box-sizing: border-box;
+  width: 264px;
+  padding: 6px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  background: var(--background-primary);
+  box-shadow: var(--shadow-l);
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
+}
+button.tm-task-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-normal);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.tm-task-menu-item:hover, button.tm-task-menu-item:focus-visible { background: var(--background-modifier-hover); }
+.tm-task-menu-icon { display: inline-flex; flex: 0 0 auto; color: var(--text-muted); }
+.tm-task-menu-icon svg { width: 17px; height: 17px; }
+.tm-task-menu-label { flex: 1 1 auto; }
+.tm-task-menu-shortcut { color: var(--text-faint); font-size: var(--font-ui-small); }
+.tm-task-menu-chevron { display: inline-flex; color: var(--text-faint); }
+.tm-task-menu-chevron svg { width: 14px; height: 14px; }
+button.tm-task-menu-item.is-danger, button.tm-task-menu-item.is-danger .tm-task-menu-icon { color: var(--text-error); }
+.tm-task-menu-separator { height: 1px; margin: 6px 0; background: var(--background-modifier-border); }
+.tm-task-menu-heading { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 2px; }
+.tm-task-menu-icons { display: flex; gap: 6px; padding: 2px 8px 6px; }
+button.tm-task-menu-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: var(--font-bold);
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+button.tm-task-menu-icon-button svg { width: 19px; height: 19px; }
+button.tm-task-menu-icon-button:hover, button.tm-task-menu-icon-button:focus-visible, button.tm-task-menu-icon-button.is-active { background: var(--background-modifier-hover); }
+button.tm-task-menu-icon-button.is-active { box-shadow: inset 0 0 0 1px var(--background-modifier-border-hover); }
+button.tm-task-menu-icon-button.is-today { color: var(--color-green); }
+button.tm-task-menu-icon-button.is-tomorrow { color: var(--color-blue); }
+button.tm-task-menu-icon-button.is-next-week { color: var(--color-orange); }
+button.tm-task-menu-icon-button.is-p1 { color: var(--text-error); }
+button.tm-task-menu-icon-button.is-p2 { color: var(--color-orange); }
+button.tm-task-menu-icon-button.is-p3 { color: var(--color-blue); }
+.tm-tags-popover { width: 240px; }
+.tm-tags-popover .tm-options-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (pointer: coarse) {
+  button.tm-task-menu-item { min-height: 44px; }
+  button.tm-task-menu-icon-button { width: 44px; height: 40px; }
+}
+
+/* Card: the note the task lives in, at the toolbar's left; opens a list to move the task elsewhere. */
+.tm-things-card-toolbar { align-items: center; }
+button.tm-things-card-project {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 60%;
+  height: auto;
+  margin-inline-end: auto;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+button.tm-things-card-project:hover, button.tm-things-card-project:focus-visible { background: var(--background-modifier-hover); color: var(--text-normal); }
+.tm-things-card-project-icon, .tm-things-card-project-chevron { display: inline-flex; flex: none; }
+.tm-things-card-project-icon svg { width: 14px; height: 14px; }
+.tm-things-card-project-chevron svg { width: 12px; height: 12px; color: var(--text-faint); }
+.tm-things-card-project-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Task sidebar (the right sidebar by default): Today's hours or Upcoming's tasks with no date over the selected task's
+   details (when a task is selected), or elsewhere the details alone; only the tasks, with no headings or calendar controls.
+   It shares the task views' styles through .tm-main-view. */
+.workspace-leaf-content[data-type="task-manager-sidebar"] .view-content.tm-task-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: var(--size-4-3) var(--size-4-3) var(--size-4-6);
+}
+.tm-sidebar-pane { display: flex; flex-direction: column; gap: var(--size-4-3); }
+/* Its toolbar, as the task navigation's, at the top above whatever it shows. */
+.tm-task-sidebar .tm-sidebar-toolbar { flex: 0 0 auto; margin: calc(-1 * var(--size-4-3)) calc(-1 * var(--size-4-3)) var(--size-4-2); }
+/* Its list (or today's calendar) fills the sidebar, or with a task shown (and no drag of tasks under way), the task's
+   details do: one at a time. */
+.workspace-leaf-content[data-type="task-manager-sidebar"] .view-content.tm-task-sidebar { overflow: hidden; padding-bottom: var(--size-4-3); }
+.tm-task-sidebar .tm-sidebar-planner { display: flex; flex: 1 1 0; flex-direction: column; min-height: 160px; overflow-y: auto; }
+.tm-task-sidebar .tm-sidebar-pane { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.tm-task-sidebar .tm-sidebar-planner[hidden], .tm-sidebar-pane[hidden] { display: none; }
+/* Above the list: its name, and its View options, whose panel fills the sidebar's width below. */
+.tm-sidebar-planner-head { position: relative; display: flex; flex: none; align-items: center; justify-content: space-between; gap: var(--size-4-2); padding: 0 0 var(--size-4-2) 6px; }
+.tm-sidebar-planner-head[hidden] { display: none; }
+.tm-sidebar-planner-title { color: var(--text-muted); font-size: var(--font-ui-small); font-weight: var(--font-semibold); }
+.tm-sidebar-planner-head .tm-options-panel { left: 0; right: 0; width: auto; max-width: none; }
+.tm-task-sidebar .tm-sidebar-planner .tm-section { margin-bottom: var(--size-4-4); }
+/* The list's name is a button that picks what it shows. */
+button.tm-sidebar-planner-title.tm-sidebar-idle-title {
+  display: inline-flex; align-items: center; gap: 4px; height: auto; margin-left: -6px; padding: 2px 6px;
+  border: 0; border-radius: var(--radius-s); box-shadow: none; background: transparent; cursor: pointer;
+}
+button.tm-sidebar-idle-title:hover, button.tm-sidebar-idle-title:focus-visible { background: var(--background-modifier-hover); color: var(--text-normal); }
+.tm-sidebar-idle-chevron { display: inline-flex; }
+.tm-sidebar-idle-chevron svg { width: 12px; height: 12px; color: var(--text-faint); }
+.tm-task-sidebar .tm-sidebar-idle .tm-section { margin-bottom: var(--size-4-4); }
+.tm-task-sidebar.is-calendar .tm-sidebar-planner { overflow: hidden; }
+
+/* Today's hours fill their part, and scroll. */
+.tm-sidebar-calendar, .tm-sidebar-calendar .tm-calendar { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+/* Today's all-day tasks above its hours, scrolling on their own when there are many. */
+.tm-sidebar-calendar .tm-calendar-allday { flex-shrink: 0; max-height: 30%; overflow-y: auto; }
+.tm-task-sidebar .tm-calendar-day-scroll { flex: 1; min-height: 0; max-height: none; border-radius: var(--radius-m); }
+/* The list's rows are narrower than a view's: their properties go below the title. */
+.tm-task-sidebar :is(.tm-sidebar-planner, .tm-sidebar-idle) .tm-task-list { margin: 0; }
+.tm-task-sidebar :is(.tm-sidebar-planner, .tm-sidebar-idle) .tm-task-content { grid-template-columns: minmax(0, 1fr); }
+
+/* The selected task. */
+.tm-task-sidebar .tm-sidebar-empty { flex: 1; min-height: 240px; padding: 0 var(--size-4-4); }
+.tm-sidebar-footer { display: flex; }
+button.tm-sidebar-open-note {
+  display: inline-flex; align-items: center; gap: 6px; height: auto; padding: 4px 8px;
+  border: 0; border-radius: var(--radius-s); box-shadow: none; background: transparent;
+  color: var(--text-muted); font-size: var(--font-ui-small); cursor: pointer;
+}
+button.tm-sidebar-open-note:hover, button.tm-sidebar-open-note:focus-visible { background: var(--background-modifier-hover); color: var(--text-normal); }
+.tm-sidebar-open-note-icon { display: inline-flex; }
+.tm-sidebar-open-note-icon svg { width: 14px; height: 14px; }
+
+/* The title over rows of properties (a name at the left, its value at the right), then notes and subtasks. */
+.tm-sidebar-details { display: flex; flex-direction: column; }
+.tm-sidebar-head {
+  /* The title in the normal text size; the checkbox and close button centre on its first line. */
+  --tm-sidebar-title-size: var(--font-text-size, 16px);
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 0 8px; align-items: start;
+  padding-bottom: var(--size-4-3); border-bottom: 1px solid var(--background-modifier-border);
+}
+/* The checkbox sits in a box as tall as the title's first line, centred on it, whatever the style's checkbox size. */
+.tm-task-sidebar .tm-sidebar-head .tm-checkbox-target { display: flex; align-items: center; align-self: start; width: auto; height: calc(var(--tm-sidebar-title-size) * 1.35); min-height: 0; margin: 0; padding: 0; }
+.tm-task-sidebar .tm-sidebar-head .tm-task-checkbox { margin: 0; }
+/* Several tasks: Multiple tasks in the title's place, as large. */
+.tm-sidebar-selection-name { font-size: var(--tm-sidebar-title-size); font-weight: var(--font-semibold); line-height: 1.35; }
+.tm-sidebar-property-value.is-mixed { color: var(--text-muted); font-style: italic; }
+/* The close button, centred on the title's first line too. */
+.tm-task-sidebar .tm-sidebar-head .tm-sidebar-close { align-self: start; height: calc(var(--tm-sidebar-title-size) * 1.35); padding: 0 4px; color: var(--text-faint); }
+.tm-task-sidebar .tm-sidebar-head .tm-sidebar-close:hover { color: var(--text-normal); }
+.tm-task-sidebar .tm-sidebar-head :is(.tm-things-card-title-backdrop, textarea.tm-things-card-title) { font-size: var(--tm-sidebar-title-size); font-weight: var(--font-semibold); line-height: 1.35; }
+.tm-sidebar-properties { display: flex; flex-direction: column; padding: var(--size-4-2) 0; border-bottom: 1px solid var(--background-modifier-border); }
+.tm-sidebar-property {
+  display: grid; grid-template-columns: minmax(88px, 38%) minmax(0, 1fr); align-items: center; gap: var(--size-4-2);
+  min-height: 30px; padding: 3px 6px; border-radius: var(--radius-s); font-size: var(--font-ui-small); cursor: pointer;
+}
+.tm-sidebar-property:hover, .tm-sidebar-property:focus-visible { background: var(--background-modifier-hover); }
+.tm-sidebar-property-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-muted); }
+.tm-sidebar-property-icon { display: inline-flex; flex: none; color: var(--text-faint); }
+.tm-sidebar-property-icon svg { width: 14px; height: 14px; }
+.tm-sidebar-property-value { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; color: var(--text-normal); overflow-wrap: anywhere; }
+.tm-sidebar-property-value.is-empty { color: var(--text-faint); }
+.tm-sidebar-property-value.is-overdue { color: var(--text-error); }
+.tm-sidebar-property-extra { color: var(--text-muted); }
+.tm-sidebar-property .tm-task-tag, .tm-sidebar-property .tm-task-source { color: var(--text-normal); }
+.tm-task-sidebar .tm-sidebar-property .tm-task-due {
+  padding: 1px 8px 1px 7px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+.tm-sidebar-property .tm-task-due .tm-task-detail-icon svg { fill: currentColor; }
+.tm-sidebar-property.is-p1 :is(.tm-sidebar-property-icon, .tm-sidebar-property-value) { color: var(--text-error); }
+.tm-sidebar-property.is-p2 :is(.tm-sidebar-property-icon, .tm-sidebar-property-value) { color: var(--color-orange); }
+.tm-sidebar-property.is-p3 :is(.tm-sidebar-property-icon, .tm-sidebar-property-value) { color: var(--color-blue); }
+.tm-sidebar-property.is-status.is-doing .tm-sidebar-property-icon { color: var(--text-accent); }
+.tm-sidebar-property.is-status.is-waiting .tm-sidebar-property-icon { color: var(--color-orange); }
+/* Notes, then the subtasks, follow the properties without headings of their own. */
+.tm-task-sidebar textarea.tm-sidebar-notes {
+  display: block; width: 100%; min-height: 0; margin-top: var(--size-4-3); padding: 4px 6px;
+  border: 1px solid transparent; border-radius: var(--radius-s); box-shadow: none; background: transparent;
+  color: var(--text-normal); font-family: inherit; font-size: var(--font-ui-small); line-height: 1.5; resize: none; overflow: hidden;
+}
+.tm-task-sidebar textarea.tm-sidebar-notes:hover { background: var(--background-modifier-hover); }
+.tm-task-sidebar textarea.tm-sidebar-notes:focus { border-color: var(--background-modifier-border-focus); background: transparent; box-shadow: none; }
+.tm-task-sidebar textarea.tm-sidebar-notes::placeholder { color: var(--text-faint); }
+.tm-sidebar-subtasks { display: flex; flex-direction: column; margin-top: var(--size-4-3); }
+/* As the task's own head (and a list's rows): the checkbox centred in a 22px column, the title 8px after it, so each
+   subtask's checkbox and title line up under the task's. The row to add one is laid out the same. */
+.tm-sidebar-subtask {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 0 8px; align-items: center;
+  min-height: 30px; border-radius: var(--radius-s); font-size: var(--font-ui-small);
+}
+.tm-sidebar-subtask:hover { background: var(--background-modifier-hover); }
+.tm-sidebar-subtask > :first-child { justify-self: center; margin: 0; }
+.tm-task-sidebar input.tm-sidebar-subtask-title {
+  flex: 1; min-width: 0; height: auto; padding: 2px 0;
+  border: 0; border-radius: 0; box-shadow: none; background: transparent; color: inherit; font: inherit;
+}
+/* Griply: a subtask's checkbox (or the dashed one for the next) sits on its title's line, as a list row's does, rather
+   than in the middle of the row. */
+.tm-task-sidebar.tm-style-griply .tm-sidebar-subtask { --tm-subtask-line: calc(var(--font-ui-small) * 1.5 + 4px); align-items: start; align-content: center; }
+.tm-task-sidebar.tm-style-griply input.tm-sidebar-subtask-title { height: var(--tm-subtask-line); line-height: 1.5; }
+.tm-task-sidebar.tm-style-griply .tm-sidebar-subtask > :first-child { margin-top: calc((var(--tm-subtask-line) - var(--checkbox-size, 16px)) / 2); }
+.tm-task-sidebar input.tm-sidebar-subtask-title:focus { border: 0; box-shadow: none; }
+.tm-sidebar-subtask.is-completed .tm-sidebar-subtask-title { color: var(--text-faint); text-decoration: line-through; }
+/* Where the next subtask's checkbox will be: a checkbox's outline, dashed. */
+.tm-sidebar-subtask-add {
+  flex: none; box-sizing: border-box; width: var(--checkbox-size, 15px); height: var(--checkbox-size, 15px);
+  border: 1px dashed var(--checkbox-border-color, var(--text-faint)); border-radius: var(--checkbox-radius, 4px);
+}
+/* The Things style: the details read like an open Things card. Each property is a line of its icon and its value, in the
+   card's weight (an unset one shows its name, faint); Today has its yellow star, a date its red calendar, a deadline its
+   flag; tags are pills; and the subtasks are the card's checklist, round boxes between hairlines. */
+.tm-task-sidebar.tm-style-things .tm-sidebar-property { grid-template-columns: 14px minmax(0, 1fr); gap: 7px; }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-name > :not(.tm-sidebar-property-icon) { display: none; }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-icon { color: var(--text-normal); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-value { color: var(--text-normal); font-weight: var(--font-semibold); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-value.is-empty { color: var(--text-faint); font-weight: var(--font-normal); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-extra { color: var(--text-muted); font-weight: var(--font-normal); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property.is-today .tm-sidebar-property-icon { color: var(--color-yellow); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property.is-dated .tm-sidebar-property-icon { color: var(--color-red); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property:is(.is-today, .is-deadline) .tm-sidebar-property-icon svg { fill: currentColor; }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property.is-urgent :is(.tm-sidebar-property-icon, .tm-sidebar-property-value) { color: var(--text-error); }
+/* Priority colours its icon only, as on a card. */
+.tm-task-sidebar.tm-style-things .tm-sidebar-property:is(.is-p1, .is-p2, .is-p3) .tm-sidebar-property-value { color: var(--text-normal); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-property-value .tm-things-card-tag { font-weight: var(--font-semibold); }
+/* Not indented: each box centres under the property icons, its title in line with their values. */
+.tm-task-sidebar.tm-style-things .tm-sidebar-subtasks { border-top: 1px solid var(--background-modifier-border); }
+.tm-task-sidebar.tm-style-things .tm-sidebar-subtask { grid-template-columns: 12px minmax(0, 1fr); padding: 5px 2px 5px 7px; border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; }
+.tm-task-sidebar.tm-style-things .tm-sidebar-subtask:hover { background: none; }
+.tm-task-sidebar.tm-style-things .tm-sidebar-subtask-add { --checkbox-size: 12px; --checkbox-radius: 50%; border: 1.5px dashed var(--interactive-accent); opacity: 0.6; }
+.tm-sidebar-subtask.is-new input::placeholder { color: var(--text-faint); }
+@media (pointer: coarse) { .tm-sidebar-property, .tm-sidebar-subtask { min-height: 40px; } }
+/* A project being created (three panes): its progress ring in the checkbox's place, sized to the title's first line; its
+   colour as a swatch; any problem creating it, then the Create project button. */
+.tm-task-sidebar .tm-sidebar-head .tm-sidebar-project-ring { display: flex; align-items: center; justify-content: center; height: calc(var(--tm-sidebar-title-size) * 1.35); }
+.tm-sidebar-project-ring .tm-project-progress { min-height: 0; font-size: var(--font-ui-medium); }
+.tm-sidebar-project-swatch { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--tm-project-color); }
+.tm-task-sidebar .tm-sidebar-error { min-height: 0; margin: var(--size-4-2) 6px 0; }
+.tm-task-sidebar .tm-sidebar-error:empty { display: none; }
+.tm-sidebar-footer.tm-sidebar-create { justify-content: flex-end; margin-top: var(--size-4-3); }
+/* View options' footer: Convert to smart list, below the options, always in view. */
+.tm-options-footer { flex-shrink: 0; padding: 8px 12px; border-top: 1px solid var(--background-modifier-border); }
+button.tm-options-convert, button.tm-options-update {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: auto; padding: 8px 10px;
+  border: 0; border-radius: 8px; box-shadow: none; background: transparent;
+  color: var(--text-accent); font-size: var(--font-ui-small); font-weight: var(--font-medium); cursor: pointer;
+}
+button.tm-options-convert:hover, button.tm-options-convert:focus-visible,
+button.tm-options-update:not(:disabled):hover, button.tm-options-update:focus-visible { background: var(--background-modifier-hover); }
+button.tm-options-update:disabled { color: var(--text-faint); cursor: default; }
+
+/* A project's status property, beside its dates; in progress and waiting take the colours a task's status has. */
+.tm-project-status { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.tm-project-status .tm-task-detail-icon { display: inline-flex; }
+.tm-project-status .tm-task-detail-icon svg { width: var(--icon-xs); height: var(--icon-xs); }
+.tm-project-status.is-doing .tm-task-detail-icon { color: var(--text-accent); }
+.tm-project-status.is-waiting .tm-task-detail-icon { color: var(--color-orange); }
+.tm-things-trailing .tm-project-status { margin-inline-end: 8px; color: var(--text-muted); }
+
+/* A project page's description, in a card under the whole header, shaded as the layout switcher is. */
+.tm-view-header.has-description { margin-bottom: var(--size-4-3); }
+.tm-project-description {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-8);
+  padding: var(--size-4-3) var(--size-4-4);
+  border-radius: var(--radius-m);
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+.tm-project-description[hidden] { display: none; }
+/* Its chevron, before the text, folds it to its first line (it stays folded on later visits). */
+.tm-project-description > button.tm-description-fold {
+  position: static; flex-shrink: 0; height: 1lh; opacity: 1; transform: none; color: var(--text-muted);
+}
+.tm-project-description-text { flex: 1; min-width: 0; }
+.tm-project-description.is-folded .tm-project-description-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tm-project-description-input {
+  display: block; width: 100%; min-height: 3lh; padding: 0; border: 0; resize: none; overflow: hidden;
+  background: transparent; box-shadow: none; color: inherit; font: inherit; line-height: inherit;
+}
+.tm-project-description-input:focus, .tm-project-description-input:focus-visible { border: 0; box-shadow: none; outline: none; }
