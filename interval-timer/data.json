@@ -1,0 +1,13 @@
+{
+  "focusIntervalDuration": 25,
+  "shortBreakDuration": 5,
+  "longBreakDuration": 15,
+  "longBreakAfter": 4,
+  "notificationStyle": "simple",
+  "flashOverlayEnabled": true,
+  "focusTickSoundVolume": 0,
+  "intervalCompletionBehavior": "advanceToNextInterval",
+  "focusBgmType": "none",
+  "focusBgmVolume": 25,
+  "timeUpSoundVolume": 20
+}

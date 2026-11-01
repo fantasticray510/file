@@ -1,0 +1,29 @@
+{
+  "nonEmptyLineDisabled": false,
+  "showPlaceholder": true,
+  "cmdsSorting": [
+    "insert-text",
+    "insert-note-callout",
+    "insert-math",
+    "insert-quote",
+    "insert-embed",
+    "bookmark",
+    "insert-bulletList",
+    "insert-numberList",
+    "insert-code",
+    "insert-divide",
+    "insert-table",
+    "insert-bug-callout",
+    "insert-example-callout",
+    "insert-quote-callout",
+    "insert-danger-callout",
+    "insert-failure-callout",
+    "insert-warning-callout",
+    "insert-question-callout",
+    "insert-success-callout",
+    "insert-tip-callout",
+    "insert-info-callout",
+    "insert-abstract-callout"
+  ],
+  "disableSelectionMenu": false
+}
