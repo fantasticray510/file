@@ -1,0 +1,19 @@
+{
+  "workLen": 25,
+  "breakLen": 5,
+  "autostart": true,
+  "useStatusBarTimer": true,
+  "notificationSound": true,
+  "customSound": "",
+  "showTaskProgress": true,
+  "enableTaskTracking": true,
+  "logFile": "DAILY",
+  "logFocused": false,
+  "logPath": "",
+  "logLevel": "ALL",
+  "logTemplate": "<%*\nconst begin = log.begin.format(\"HH:mm\");\nlet end = log.end.format(\"HH:mm\");\nif (begin === end) {\n  end = log.begin.clone().add(1, \"minutes\").format(\"HH:mm\");\n}\nconst taskName = log.task.name ? log.task.name.replace(/\\[🍅::.*?\\]/g, \"\").trim() : \"⚡ 割り込み\";\nif (log.mode == \"WORK\") {\n  const icon = log.finished ? \"🍅\" : \"▶️\";\n  tR = `- ${begin} - ${end} ${icon} ${taskName} ( ${log.duration} / ${log.session} )`;\n} else {\n  tR = `- ${begin} - ${end} ☕️ 休憩 (${log.duration} )`;\n}\n%>",
+  "logFormat": "CUSTOM",
+  "useSystemNotification": true,
+  "taskFormat": "TASKS",
+  "lowFps": true
+}
