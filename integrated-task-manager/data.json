@@ -1,6 +1,6 @@
 {
   "smartLists": [],
-  "taskMode": true,
+  "taskMode": false,
   "linkDates": true,
   "tagFormat": "hash",
   "dateFormat": "",
@@ -8,7 +8,7 @@
   "showSubtasks": true,
   "calendarProjectColors": true,
   "calendarPriorityColors": true,
-  "inboxPath": "Inbox.md",
+  "inboxPath": "01_Journal/Daily/2026-11-03.md",
   "projectFolder": "10_Projects",
   "moveConvertedProjects": true,
   "newTaskPosition": "top",
@@ -18,7 +18,9 @@
   "showFiles": true,
   "fileSortOrder": "alphabetical",
   "customFileOrder": false,
-  "favorites": [],
+  "favorites": [
+    "tag:weekend"
+  ],
   "navOrder": {
     "projects": [],
     "tags": [],
@@ -31,9 +33,15 @@
   "completedSection": "Task Log",
   "noteGroupLabel": "name",
   "foldedDescriptions": [],
-  "viewOptions": {},
+  "viewOptions": {
+    "inbox": {
+      "filters": [],
+      "sort": "source",
+      "descending": false,
+      "grouping": "default"
+    }
+  },
   "viewLayouts": {
-    "project:10_Projects/Active/ASPC.md": "calendar",
     "projects": "gantt"
   },
   "viewPeriods": {},
@@ -43,5 +51,5 @@
   ],
   "ignoreCodeBlockTasks": true,
   "panelsPlaced": true,
-  "sidebarIdleView": "context"
+  "sidebarIdleView": "inbox"
 }
