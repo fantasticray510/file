@@ -1547,6 +1547,29 @@ var join = (...partSegments) => {
     newParts.unshift("");
   return newParts.join("/");
 };
+var appendUnderDayPlanner = async (app, file, lineToAdd) => {
+  await app.vault.process(file, (content) => {
+    const lines = content.split("\n");
+    const headingRegex = /^##\s+Day\s+plann?er\s*$/i;
+    let headingIdx = lines.findIndex((l) => headingRegex.test(l.trim()));
+    if (headingIdx === -1) {
+      return `${content.trimEnd()}\n\n## Day planner\n${lineToAdd}`;
+    } else {
+      let insertIdx = lines.length;
+      for (let i = headingIdx + 1; i < lines.length; i++) {
+        if (/^#{1,2}\s+/.test(lines[i]) || /^---\s*$/.test(lines[i])) {
+          insertIdx = i;
+          break;
+        }
+      }
+      while (insertIdx > headingIdx + 1 && lines[insertIdx - 1].trim() === "") {
+        insertIdx--;
+      }
+      lines.splice(insertIdx, 0, lineToAdd);
+      return lines.join("\n");
+    }
+  });
+};
 var getDailyNoteFile = async () => {
   const file = (0, import_obsidian_daily_notes_interface.getDailyNote)((0, import_obsidian.moment)(), (0, import_obsidian_daily_notes_interface.getAllDailyNotes)());
   if (!file) {
@@ -1731,7 +1754,7 @@ var DEFAULT_SYMBOLS = {
     createdDateRegex: /➕ *(\d{4}-\d{2}-\d{2})$/u,
     scheduledDateRegex: /[⏳⌛] *(\d{4}-\d{2}-\d{2})$/u,
     dueDateRegex: /[📅📆🗓] *(\d{4}-\d{2}-\d{2})$/u,
-    doneDateRegex: /✅ *(\d{4}-\d{2}-\d{2})$/u,
+    doneDateRegex: /(?:✅ *(\d{4}-\d{2}-\d{2})|✓ *\[\[(\d{4}-\d{2}-\d{2})\]\])$/u,
     cancelledDateRegex: /❌ *(\d{4}-\d{2}-\d{2})$/u,
     recurrenceRegex: /🔁 ?([a-zA-Z0-9, !]+)$/iu,
     pomodorosRegex: /(?:(?:\[|\() *🍅:: *(\d* *\/? *\d*) *(?:\]|\))(?: *,)?|(?:^|\s)(\d+\/\d+|\/\d+))$/u
@@ -1810,7 +1833,7 @@ var DefaultTaskSerializer = class {
       );
       if (doneDateMatch !== null) {
         doneDate = window.moment(
-          doneDateMatch[1],
+          doneDateMatch[1] || doneDateMatch[2],
           TaskRegularExpressions.dateFormat
         );
         line = line.replace(TaskFormatRegularExpressions.doneDateRegex, "").trim();
@@ -3312,13 +3335,18 @@ function instance2($$self, $$props, $$invalidate) {
   const showTaskMenu = (task) => (e) => {
     const menu = new import_obsidian3.Menu();
     menu.addItem((item) => {
-      item.setTitle("Open").onClick(() => {
-        tracker.openTask(e, task);
+      item.setTitle(task.checked ? "\u2B1C \u672A\u5B8C\u4E86\u306B\u623B\u3059" : "\u2705 \u30BF\u30B9\u30AF\u3092\u5B8C\u4E86\u3055\u305B\u308B").onClick(() => {
+        tracker.toggleTaskCompletion(task);
       });
     });
     menu.addItem((item) => {
       item.setTitle("\u{1F4C5} Day Planner \u306B\u4E88\u5B9A\u8FFD\u52A0").onClick(() => {
         tracker.copyTaskToDayPlanner(task);
+      });
+    });
+    menu.addItem((item) => {
+      item.setTitle("Open").onClick(() => {
+        tracker.openTask(e, task);
       });
     });
     menu.showAtMouseEvent(e);
@@ -4369,8 +4397,7 @@ var Logger = class {
     if (logFile) {
       const logText = await this.toText(log, logFile);
       if (logText) {
-        await this.plugin.app.vault.append(logFile, `
-${logText}`);
+        await appendUnderDayPlanner(this.plugin.app, logFile, logText.trim());
       }
     }
     return logFile;
@@ -5163,23 +5190,77 @@ var TaskTracker = class {
   }
   finish() {
   }
+  async toggleTaskCompletion(targetTask) {
+    if (!targetTask || !targetTask.path) return;
+    let file = this.plugin.app.vault.getAbstractFileByPath(targetTask.path);
+    if (!file || !(file instanceof import_obsidian9.TFile) || file.extension !== "md") return;
+    const format = this.plugin.getSettings().taskFormat;
+    let updated = false;
+    await this.plugin.app.vault.process(file, (content) => {
+      const lines = content.split("\n");
+      let targetLineNr = -1;
+      if (targetTask.line >= 0 && targetTask.line < lines.length) {
+        const comp = extractTaskComponents(lines[targetTask.line]);
+        if (comp) {
+          const det = DESERIALIZERS[format].deserialize(comp.body);
+          if (det.description === targetTask.description) {
+            targetLineNr = targetTask.line;
+          }
+        }
+      }
+      if (targetLineNr === -1) {
+        for (let i = 0; i < lines.length; i++) {
+          const comp = extractTaskComponents(lines[i]);
+          if (comp) {
+            const det = DESERIALIZERS[format].deserialize(comp.body);
+            if (det.description === targetTask.description) {
+              targetLineNr = i;
+              break;
+            }
+          }
+        }
+      }
+      if (targetLineNr !== -1) {
+        let line = lines[targetLineNr];
+        if (!targetTask.checked) {
+          line = line.replace(/^([\s\t>]*[-*+]\s+)\[.\]/, "$1[x]");
+          const today = (0, import_obsidian9.moment)().format("YYYY-MM-DD");
+          if (!line.includes(`\u2713[[${today}]]`) && !line.includes("\u2705")) {
+            line = `${line.trimEnd()} \u2713[[${today}]]`;
+          }
+        } else {
+          line = line.replace(/^([\s\t>]*[-*+]\s+)\[.\]/, "$1[ ]");
+          line = line.replace(/\s*\u2713\[\[\d{4}-\d{2}-\d{2}\]\]/g, "").replace(/\s*\u2705\s*\d{4}-\d{2}-\d{2}/g, "");
+        }
+        lines[targetLineNr] = line;
+        updated = true;
+        return lines.join("\n");
+      }
+      return content;
+    });
+    if (updated) {
+      this.plugin.tasks.loadFileTasks(file);
+      if (this.state.task && this.state.task.description === targetTask.description) {
+        this.store.update((state) => {
+          if (state.task) {
+            state.task.checked = !targetTask.checked;
+          }
+          return state;
+        });
+      }
+      new import_obsidian9.Notice(targetTask.checked ? `\u672A\u5B8C\u4E86\u306B\u623B\u3057\u307E\u3057\u305F: ${targetTask.name}` : `\u5B8C\u4E86\u3057\u307E\u3057\u305F: ${targetTask.name}`);
+    }
+  }
   async copyTaskToDayPlanner(task) {
     const dailyFile = await getDailyNoteFile();
     if (!dailyFile) return;
-    let content = await this.plugin.app.vault.read(dailyFile);
     const cleanName = (task.description || task.name || "").replace(/(?:\[🍅::.*?\]|\s+\d*\/\d+|\s+\^[a-zA-Z0-9-]+)\s*$/g, "").trim();
     const pomoCount = task.expected && task.expected > 0 ? task.expected : 1;
     const durMin = pomoCount * (this.plugin.getSettings().workLen || 25);
     const start = (0, import_obsidian9.moment)();
     const end = start.clone().add(durMin, "minutes");
     const newLine = `- ${start.format("HH:mm")} - ${end.format("HH:mm")} ${cleanName}`;
-    const heading = "## Day planner";
-    if (!content.includes(heading)) {
-      content = `${content.trimEnd()}\n\n${heading}\n${newLine}`;
-    } else {
-      content = `${content.trimEnd()}\n${newLine}`;
-    }
-    await this.plugin.app.vault.modify(dailyFile, content);
+    await appendUnderDayPlanner(this.plugin.app, dailyFile, newLine);
     new import_obsidian9.Notice(`Day Planner \u306B\u8FFD\u52A0\u3057\u307E\u3057\u305F: ${start.format("HH:mm")} - ${end.format("HH:mm")} (${durMin}\u5206) ${cleanName}`);
   }
   destory() {
@@ -5220,71 +5301,80 @@ var TaskTracker = class {
     }
   }
   async incrTaskActual(targetTask, file) {
-    var _a;
     const format = this.plugin.getSettings().taskFormat;
     if (file.extension !== "md") {
       return;
     }
     let metadata = this.plugin.app.metadataCache.getFileCache(file);
-    let content = await this.plugin.app.vault.read(file);
-    if (!content || !metadata) {
+    if (!metadata) {
       return;
     }
-    const lines = content.split("\n");
     const SHORT_POMO_REGEX = /(?:^|\s)(\d*\/\d+)(?=\s*$)/;
-    let candidate = null;
-    for (let rawElement of metadata.listItems || []) {
-      if (rawElement.task) {
-        let lineNr = rawElement.position.start.line;
-        let line = lines[lineNr];
-        const components = extractTaskComponents(line);
-        if (!components) {
-          continue;
-        }
-        let detail = DESERIALIZERS[format].deserialize(components.body);
-        if (detail.description === targetTask.description) {
-          candidate = { lineNr, line, components, detail };
-          if (lineNr === targetTask.line) {
-            break;
+    await this.plugin.app.vault.process(file, (content) => {
+      if (!content) return content;
+      const lines = content.split("\n");
+      let candidate = null;
+      for (let rawElement of metadata.listItems || []) {
+        if (rawElement.task) {
+          let lineNr = rawElement.position.start.line;
+          if (lineNr < 0 || lineNr >= lines.length) continue;
+          let line = lines[lineNr];
+          const components = extractTaskComponents(line);
+          if (!components) {
+            continue;
+          }
+          let detail = DESERIALIZERS[format].deserialize(components.body);
+          if (detail.description === targetTask.description) {
+            candidate = { lineNr, line, components, detail };
+            if (lineNr === targetTask.line) {
+              break;
+            }
           }
         }
       }
-    }
-    if (candidate) {
-      let { lineNr, line, components, detail } = candidate;
-      const match = components.body.match(POMODORO_REGEX);
-      const shortMatch = components.body.match(SHORT_POMO_REGEX);
-      if (match !== null) {
-        let pomodoros = match[1];
-        let [actual, expected] = pomodoros.split("/");
-        actual = actual || "0";
-        let text2 = `\u{1F345}:: ${parseInt(actual) + 1}`;
-        if (expected !== void 0) {
-          text2 += `/${expected.trim()}`;
+      if (!candidate) {
+        for (let i = 0; i < lines.length; i++) {
+          const components = extractTaskComponents(lines[i]);
+          if (components) {
+            let detail = DESERIALIZERS[format].deserialize(components.body);
+            if (detail.description === targetTask.description) {
+              candidate = { lineNr: i, line: lines[i], components, detail };
+              if (i === targetTask.line) break;
+            }
+          }
         }
-        line = line.replace(/🍅:: *(\d* *\/? *\d* *)/, text2).trim();
-      } else if (shortMatch !== null) {
-        let pomodoros = shortMatch[1].trim();
-        let [actual, expected] = pomodoros.split("/");
-        actual = actual || "0";
-        let nextVal = `${parseInt(actual) + 1}/${expected.trim()}`;
-        line = line.replace(/(\d*\/\d+)(?=\s*(?:\^[a-zA-Z0-9-]+)?\s*$)/, nextVal);
-      } else {
-        line = line.replace(
-          detail.description,
-          `${detail.description} 1/1`
-        );
       }
-      lines[lineNr] = line;
-      await this.plugin.app.vault.modify(file, lines.join("\n"));
-      this.plugin.app.metadataCache.trigger(
-        "changed",
-        file,
-        content,
-        metadata
-      );
-      (_a = this.plugin.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView)) == null ? void 0 : _a.load();
-    }
+      if (candidate) {
+        let { lineNr, line, components, detail } = candidate;
+        const match = components.body.match(POMODORO_REGEX);
+        const shortMatch = components.body.match(SHORT_POMO_REGEX);
+        if (match !== null) {
+          let pomodoros = match[1];
+          let [actual, expected] = pomodoros.split("/");
+          actual = actual || "0";
+          let text2 = `\u{1F345}:: ${parseInt(actual) + 1}`;
+          if (expected !== void 0) {
+            text2 += `/${expected.trim()}`;
+          }
+          line = line.replace(/🍅:: *(\d* *\/? *\d* *)/, text2).trim();
+        } else if (shortMatch !== null) {
+          let pomodoros = shortMatch[1].trim();
+          let [actual, expected] = pomodoros.split("/");
+          actual = actual || "0";
+          let nextVal = `${parseInt(actual) + 1}/${expected.trim()}`;
+          line = line.replace(/(\d*\/\d+)(?=\s*(?:\^[a-zA-Z0-9-]+)?\s*$)/, nextVal);
+        } else {
+          line = line.replace(
+            detail.description,
+            `${detail.description} 1/1`
+          );
+        }
+        lines[lineNr] = line;
+        return lines.join("\n");
+      }
+      return content;
+    });
+    this.plugin.tasks.loadFileTasks(file);
   }
 };
 
